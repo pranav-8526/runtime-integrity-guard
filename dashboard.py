@@ -30,32 +30,108 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>RIG Security Dashboard</title>
+                <title>RIG Security Command Center</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
                 <style>
+                    :root {{
+                        --bg-color: #030712;
+                        --card-bg: rgba(17, 24, 39, 0.85);
+                        --border-color: rgba(56, 189, 248, 0.2);
+                        --cyan: #00f0ff;
+                        --red: #ff3838;
+                        --green: #00ff66;
+                        --accent: #3b82f6;
+                    }}
                     body {{ 
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                        background: #0f172a; 
-                        color: #f8fafc; 
+                        font-family: 'Outfit', sans-serif; 
+                        background: var(--bg-color); 
+                        background-image: 
+                            radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0, transparent 50%),
+                            radial-gradient(at 100% 100%, rgba(0, 240, 255, 0.08) 0, transparent 50%);
+                        color: #f3f4f6; 
                         margin: 0; 
                         padding: 2rem; 
+                        min-height: 100vh;
+                        overflow-x: hidden;
                     }}
                     .container {{
                         max-width: 1000px;
                         margin: 0 auto;
+                        position: relative;
                     }}
-                    h1 {{ 
-                        color: #38bdf8; 
-                        text-align: center; 
-                        margin-bottom: 2rem;
+                    header {{
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 2.5rem;
+                        border-bottom: 2px solid var(--border-color);
+                        padding-bottom: 1.5rem;
+                    }}
+                    .logo-section h1 {{ 
+                        font-family: 'Share Tech Mono', monospace;
+                        color: var(--cyan); 
+                        margin: 0;
+                        font-size: 2.2rem;
+                        text-transform: uppercase;
+                        letter-spacing: 2px;
+                        text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                    }}
+                    .logo-section p {{
+                        margin: 0.25rem 0 0 0;
+                        color: #6b7280;
+                        font-size: 0.85rem;
+                        letter-spacing: 1px;
+                        text-transform: uppercase;
+                    }}
+                    .system-status {{
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        font-family: 'Share Tech Mono', monospace;
+                        font-size: 0.85rem;
+                        background: rgba(0, 255, 102, 0.07);
+                        border: 1px solid var(--green);
+                        color: var(--green);
+                        padding: 0.5rem 1rem;
+                        border-radius: 4px;
+                        box-shadow: 0 0 10px rgba(0, 255, 102, 0.15);
+                        animation: pulseStatus 2s infinite alternate;
+                    }}
+                    @keyframes pulseStatus {{
+                        0% {{ box-shadow: 0 0 5px rgba(0, 255, 102, 0.15); border-color: rgba(0, 255, 102, 0.5); }}
+                        100% {{ box-shadow: 0 0 15px rgba(0, 255, 102, 0.4); border-color: var(--green); }}
                     }}
                     .card {{ 
-                        background: #1e293b; 
-                        border-radius: 12px; 
+                        background: var(--card-bg); 
+                        border-radius: 8px; 
                         padding: 1.5rem; 
                         margin-bottom: 1.5rem; 
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
-                        border: 1px solid #334155;
+                        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+                        backdrop-filter: blur(8px);
+                        border: 1px solid var(--border-color);
+                        position: relative;
+                        overflow: hidden;
+                    }}
+                    /* Cyberpunk HUD corners */
+                    .card::before {{
+                        content: "";
+                        position: absolute;
+                        top: 0; left: 0;
+                        width: 8px; height: 8px;
+                        border-top: 2px solid var(--cyan);
+                        border-left: 2px solid var(--cyan);
+                    }}
+                    .card::after {{
+                        content: "";
+                        position: absolute;
+                        bottom: 0; right: 0;
+                        width: 8px; height: 8px;
+                        border-bottom: 2px solid var(--cyan);
+                        border-right: 2px solid var(--cyan);
                     }}
                     .stats {{ 
                         display: flex; 
@@ -64,38 +140,51 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     }}
                     .stat-box {{ 
                         text-align: center; 
-                        background: #334155; 
+                        background: rgba(17, 24, 39, 0.6); 
                         padding: 1.5rem; 
-                        border-radius: 12px; 
+                        border-radius: 6px; 
                         flex: 1; 
-                        transition: all 0.2s;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                         cursor: pointer;
-                        border: 2px solid transparent;
+                        border: 1px solid rgba(255, 255, 255, 0.03);
                         user-select: none;
                     }}
                     .stat-box:hover {{
-                        transform: translateY(-5px);
+                        transform: translateY(-4px);
+                        border-color: rgba(0, 240, 255, 0.2);
+                        background: rgba(17, 24, 39, 0.8);
                     }}
                     .stat-box.active {{
-                        border-color: #38bdf8;
-                        background: #1e293b;
+                        border-color: var(--cyan);
+                        box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+                        background: rgba(0, 240, 255, 0.05);
                     }}
                     .stat-box.active-blocked {{
-                        border-color: #ef4444;
-                        background: #1e293b;
+                        border-color: var(--red);
+                        box-shadow: 0 0 15px rgba(255, 56, 56, 0.25);
+                        background: rgba(255, 56, 56, 0.05);
                     }}
                     .stat-box.active-allowed {{
-                        border-color: #22c55e;
-                        background: #1e293b;
+                        border-color: var(--green);
+                        box-shadow: 0 0 15px rgba(0, 255, 102, 0.25);
+                        background: rgba(0, 255, 102, 0.05);
                     }}
                     .stat-number {{ 
-                        font-size: 2.5rem; 
+                        font-family: 'Share Tech Mono', monospace;
+                        font-size: 2.8rem; 
                         font-weight: bold; 
-                        color: #38bdf8; 
-                        margin-bottom: 0.5rem;
+                        color: var(--cyan); 
+                        margin-bottom: 0.25rem;
+                        text-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
                     }}
-                    .blocked {{ color: #ef4444; }}
-                    .allowed {{ color: #22c55e; }}
+                    .blocked {{ 
+                        color: var(--red) !important;
+                        text-shadow: 0 0 8px rgba(255, 56, 56, 0.2) !important;
+                    }}
+                    .allowed {{ 
+                        color: var(--green) !important;
+                        text-shadow: 0 0 8px rgba(0, 255, 102, 0.2) !important;
+                    }}
                     
                     table {{ 
                         width: 100%; 
@@ -105,30 +194,67 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     th, td {{ 
                         padding: 1rem; 
                         text-align: left; 
-                        border-bottom: 1px solid #334155; 
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
                     }}
                     th {{ 
-                        color: #94a3b8; 
+                        font-family: 'Share Tech Mono', monospace;
+                        color: #9ca3af; 
                         text-transform: uppercase;
                         font-size: 0.85rem;
                         letter-spacing: 0.05em;
                     }}
-                    tr.log-row {{ cursor: pointer; }}
-                    tr.log-row:hover {{ background: #334155; }}
-                    .badge {{
-                        padding: 0.35rem 0.75rem; 
-                        border-radius: 9999px; 
-                        font-size: 0.8rem;
-                        font-weight: 600;
+                    tr.log-row {{ 
+                        cursor: pointer; 
+                        transition: all 0.2s ease;
                     }}
-                    .badge-ALLOW {{ background: rgba(34, 197, 94, 0.2); color: #4ade80; }}
-                    .badge-BLOCK {{ background: rgba(239, 68, 68, 0.2); color: #f87171; }}
+                    tr.log-row:hover {{ 
+                        background: rgba(255, 255, 255, 0.02); 
+                    }}
+                    .badge {{
+                        font-family: 'Share Tech Mono', monospace;
+                        padding: 0.3rem 0.75rem; 
+                        border-radius: 4px; 
+                        font-size: 0.8rem;
+                        font-weight: bold;
+                        letter-spacing: 0.05em;
+                        display: inline-block;
+                    }}
+                    .badge-ALLOW {{ 
+                        background: rgba(0, 255, 102, 0.1); 
+                        color: var(--green); 
+                        border: 1px solid rgba(0, 255, 102, 0.2);
+                    }}
+                    .badge-BLOCK {{ 
+                        background: rgba(255, 56, 56, 0.1); 
+                        color: var(--red); 
+                        border: 1px solid rgba(255, 56, 56, 0.2);
+                    }}
                     .reason-text {{ color: #cbd5e1; font-family: monospace; font-size: 0.9rem; }}
+                    
+                    @keyframes expandDrawer {{
+                        from {{ opacity: 0; transform: translateY(-8px); }}
+                        to {{ opacity: 1; transform: translateY(0); }}
+                    }}
+                    .detail-container {{
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1rem;
+                        animation: expandDrawer 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                    }}
                 </style>
             </head>
             <body>
                 <div class="container">
-                    <h1>🛡️ Runtime Integrity Guard Dashboard</h1>
+                    <header>
+                        <div class="logo-section">
+                            <h1>🛡️ RIG Command Center</h1>
+                            <p>Runtime Integrity Guard Security System</p>
+                        </div>
+                        <div class="system-status">
+                            <span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--green);"></span>
+                            SECURE - MONITORING ACTIVE
+                        </div>
+                    </header>
             """
             
             total = len(logs)
@@ -139,20 +265,20 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     <div class="card stats">
                         <div class="stat-box active" id="stat-total" onclick="filterLogs('all')">
                             <div class="stat-number">{total}</div>
-                            <div style="color: #94a3b8; font-weight: 500;">Total Messages</div>
+                            <div style="color: #9ca3af; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Total Messages</div>
                         </div>
                         <div class="stat-box" id="stat-blocked" onclick="filterLogs('BLOCK')">
                             <div class="stat-number blocked">{blocked}</div>
-                            <div style="color: #94a3b8; font-weight: 500;">Threats Blocked</div>
+                            <div style="color: #9ca3af; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Threats Blocked</div>
                         </div>
                         <div class="stat-box" id="stat-allowed" onclick="filterLogs('ALLOW')">
                             <div class="stat-number allowed">{allowed}</div>
-                            <div style="color: #94a3b8; font-weight: 500;">Safe Messages</div>
+                            <div style="color: #9ca3af; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Safe Messages</div>
                         </div>
                     </div>
                     
                     <div class="card">
-                        <h2 style="margin-top: 0; color: #f1f5f9;">Recent Audit Logs</h2>
+                        <h2 style="margin-top: 0; color: #f1f5f9; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px; font-size: 1.3rem;">[ RECENT AUDIT LOGS ]</h2>
                         <table>
                             <tr>
                                 <th>Direction</th>
@@ -164,7 +290,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
             if not logs:
                 html_content += """
                             <tr>
-                                <td colspan="3" style="text-align: center; color: #94a3b8; padding: 2rem;">No logs found yet. Run the tests to generate traffic!</td>
+                                <td colspan="3" style="text-align: center; color: #94a3b8; padding: 2.5rem; font-family: 'Share Tech Mono', monospace;">NO ACTIVE LOG STREAMS DETECTED. RUN SYSTEM TRAFFIC...</td>
                             </tr>
                 """
             else:
@@ -187,7 +313,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     
                     if verdict == "BLOCK":
                         score = 100
-                        explanation = f"Critically blocked by RIG proxy engine. Reason: {reason}."
+                        explanation = f"RIG mitigation engine triggered hard block: {reason}."
                     else:
                         # Scan raw message for suspicious words to calculate confidence
                         msg_str = json.dumps(log.get('message', {}), ensure_ascii=False).lower()
@@ -195,10 +321,10 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         matched_terms = [t for t in suspicious_terms if t in msg_str]
                         if matched_terms:
                             score = min(90, 10 + len(matched_terms) * 10)
-                            explanation = f"Traffic allowed, but contains suspicious term(s) ({', '.join(matched_terms)}). Minor background risk detected."
+                            explanation = f"Inspection completed: Traffic allowed, but detected suspicious cyber context terms ({', '.join(matched_terms)}). Monitoring payload closely."
                         else:
                             score = 5
-                            explanation = "Clean baseline traffic verified. No malicious indicators found."
+                            explanation = "Inspection completed: Safe baseline traffic validated. Zero threat indicators found."
                             
                     # Prettify raw JSON payload
                     raw_msg_json = json.dumps(log.get('message', {}), indent=2, ensure_ascii=False)
@@ -206,23 +332,23 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     
                     html_content += f"""
                             <tr class="log-row" data-verdict="{verdict}" data-index="{idx}" onclick="toggleDetails({idx})">
-                                <td><span style="color: #94a3b8">{direction}</span></td>
+                                <td><span style="color: #94a3b8; font-family: 'Share Tech Mono', monospace;">{direction}</span></td>
                                 <td><span class="badge badge-{verdict}">{verdict}</span></td>
                                 <td class="reason-text">{reason}</td>
                             </tr>
-                            <tr class="detail-row" id="details-{idx}" style="display: none; background: #1e293b;">
-                                <td colspan="3" style="padding: 1.5rem; border-bottom: 1px solid #334155;">
-                                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <tr class="detail-row" id="details-{idx}" style="display: none; background: rgba(15, 23, 42, 0.65);">
+                                <td colspan="3" style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                    <div class="detail-container">
                                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <strong style="color: #f1f5f9;">🔍 Security Analysis & Breakdown</strong>
-                                            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
-                                                Malicious Confidence: {score}%
+                                            <strong style="color: #f1f5f9; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; letter-spacing: 1px;">🔍 SECURITY INTELLIGENCE ANALYSIS</strong>
+                                            <span class="badge" style="background: rgba(0, 240, 255, 0.1); color: var(--cyan); border: 1px solid rgba(0, 240, 255, 0.2);">
+                                                MALICIOUS CONFIDENCE: {score}%
                                             </span>
                                         </div>
                                         <p style="margin: 0; color: #94a3b8; font-size: 0.95rem; line-height: 1.5;">{explanation}</p>
-                                        <div style="background: #0f172a; border-radius: 8px; padding: 1rem; border: 1px solid #334155; margin-top: 0.5rem;">
-                                            <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">Raw Intercepted JSON Payload</span>
-                                            <pre style="margin: 0; color: #38bdf8; font-family: monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 250px;">{escaped_json}</pre>
+                                        <div style="background: #020617; border-radius: 4px; padding: 1.25rem; border: 1px solid rgba(255, 255, 255, 0.08); margin-top: 0.5rem; position: relative;">
+                                            <span style="font-size: 0.7rem; color: #6b7280; font-family: 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: 0.1rem; display: block; margin-bottom: 0.5rem;">[ INTERCEPTED DATA STREAM ]</span>
+                                            <pre style="margin: 0; color: var(--cyan); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 250px;">{escaped_json}</pre>
                                         </div>
                                     </div>
                                 </td>
@@ -268,6 +394,13 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         const detailsRow = document.getElementById('details-' + index);
                         if (detailsRow.style.display === 'none') {
                             detailsRow.style.display = 'table-row';
+                            // Smooth animation trigger
+                            const detailContainer = detailsRow.querySelector('.detail-container');
+                            if (detailContainer) {
+                                detailContainer.style.animation = 'none';
+                                detailContainer.offsetHeight; /* trigger reflow */
+                                detailContainer.style.animation = null;
+                            }
                         } else {
                             detailsRow.style.display = 'none';
                         }
