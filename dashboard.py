@@ -2,6 +2,7 @@ import http.server
 import socketserver
 import json
 import os
+import html
 
 PORT = 3000
 
@@ -24,7 +25,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                                 pass
                                 
             # Build HTML
-            html = f"""
+            html_content = f"""
             <!DOCTYPE html>
             <html>
             <head>
@@ -117,7 +118,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
             blocked = sum(1 for log in logs if log.get("verdict") == "BLOCK")
             allowed = total - blocked
             
-            html += f"""
+            html_content += f"""
                     <div class="card stats">
                         <div class="stat-box">
                             <div class="stat-number">{total}</div>
@@ -144,17 +145,23 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
             """
             
             if not logs:
-                html += """
+                html_content += """
                             <tr>
                                 <td colspan="3" style="text-align: center; color: #94a3b8; padding: 2rem;">No logs found yet. Run the tests to generate traffic!</td>
                             </tr>
                 """
             else:
                 for log in reversed(logs[-30:]): # Show last 30
-                    verdict = log.get('verdict', 'UNKNOWN')
-                    reason = log.get('reason', 'Safe traffic passed without modification.')
-                    direction = log.get('direction', '-')
-                    html += f"""
+                    verdict = html.escape(str(log.get('verdict', 'UNKNOWN')))
+                    
+                    # Handle both 'reason' (string) and 'reasons' (list) for future-proofing Fix 7
+                    raw_reason = log.get('reasons', log.get('reason', 'Safe traffic passed without modification.'))
+                    if isinstance(raw_reason, list):
+                        raw_reason = " | ".join(raw_reason)
+                    reason = html.escape(str(raw_reason))
+                    
+                    direction = html.escape(str(log.get('direction', '-')))
+                    html_content += f"""
                             <tr>
                                 <td><span style="color: #94a3b8">{direction}</span></td>
                                 <td><span class="badge badge-{verdict}">{verdict}</span></td>
@@ -162,22 +169,22 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                             </tr>
                     """
                 
-            html += """
+            html_content += """
                         </table>
                     </div>
                 </div>
             </body>
             </html>
             """
-            self.wfile.write(html.encode("utf-8"))
+            self.wfile.write(html_content.encode("utf-8"))
         else:
-            super().do_GET()
+            self.send_error(404, "Not Found")
 
 if __name__ == "__main__":
     print(f"Starting dashboard server...")
-    print(f"Access your dashboard at: http://localhost:{PORT}")
+    print(f"Access your dashboard at: http://127.0.0.1:{PORT}")
     try:
-        with socketserver.TCPServer(("", PORT), RIGDashboardHandler) as httpd:
+        with socketserver.TCPServer(("127.0.0.1", PORT), RIGDashboardHandler) as httpd:
             httpd.serve_forever()
     except KeyboardInterrupt:
         print("\nShutting down server.")
