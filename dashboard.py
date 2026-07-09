@@ -36,7 +36,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 <style>
                     :root {{
                         --bg-color: #020202;
-                        --card-bg: rgba(10, 10, 10, 0.96);
+                        --card-bg: rgba(10, 10, 10, 0.45);
                         --border-color: rgba(255, 85, 0, 0.25);
                         --orange: #ff5500;
                         --red: #ff2222;
@@ -78,7 +78,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         will-change: transform;
                     }}
                     
-                    /* Vector Shield Background representing Security */
+                    /* Vector Shield Background representing Security (High Visibility) */
                     #bg-shield {{
                         position: fixed;
                         top: 50%;
@@ -88,11 +88,11 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         height: 55vw;
                         max-width: 650px;
                         max-height: 650px;
-                        opacity: 0.15;
+                        opacity: 0.38;
                         z-index: 3;
                         pointer-events: none;
                         will-change: transform;
-                        filter: drop-shadow(0 0 25px rgba(255, 85, 0, 0.2));
+                        filter: drop-shadow(0 0 35px rgba(255, 85, 0, 0.35));
                     }}
                     
                     /* Scanning Red Rays */
@@ -111,29 +111,39 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         pointer-events: none;
                     }}
                     
+                    /* Horizontal Wave Lines sweeping left-to-right end */
+                    .wave-line {{
+                        position: fixed;
+                        left: 0; right: 0;
+                        height: 2px;
+                        background: linear-gradient(90deg, transparent, rgba(255, 85, 0, 0.25), rgba(255, 34, 34, 0.45), rgba(255, 85, 0, 0.25), transparent);
+                        z-index: 6;
+                        pointer-events: none;
+                        animation: sweep 8s linear infinite;
+                    }}
+                    @keyframes sweep {{
+                        0% {{ transform: translateY(-10vh); opacity: 0; }}
+                        10% {{ opacity: 1; }}
+                        90% {{ opacity: 1; }}
+                        100% {{ transform: translateY(110vh); opacity: 0; }}
+                    }}
+                    
                     /* Floating Orange Tactical Target Dots */
                     .target-dot {{
                         position: fixed;
-                        width: 6px;
-                        height: 6px;
+                        width: 5px;
+                        height: 5px;
                         background: var(--orange);
                         border-radius: 50%;
-                        box-shadow: 0 0 10px var(--orange);
+                        box-shadow: 0 0 8px var(--orange);
                         z-index: 5;
                         pointer-events: none;
                         opacity: 0.7;
-                    }}
-                    .target-dot::after {{
-                        content: '';
-                        position: absolute;
-                        top: -4px; left: -4px; right: -4px; bottom: -4px;
-                        border: 1px solid var(--orange);
-                        border-radius: 50%;
-                        animation: pulseDot 2s infinite;
+                        animation: pulseDot 2.2s infinite alternate;
                     }}
                     @keyframes pulseDot {{
-                        0% {{ transform: scale(0.8); opacity: 0.8; }}
-                        100% {{ transform: scale(2); opacity: 0; }}
+                        0% {{ transform: scale(0.8); opacity: 0.3; }}
+                        100% {{ transform: scale(1.5); opacity: 0.95; }}
                     }}
                     
                     .container {{
@@ -193,7 +203,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         padding: 1.5rem; 
                         margin-bottom: 1.5rem; 
                         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
-                        backdrop-filter: blur(4px);
+                        backdrop-filter: blur(10px);
                         border: 1px solid var(--border-color);
                         position: relative;
                     }}
@@ -221,7 +231,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     }}
                     .stat-box {{ 
                         text-align: center; 
-                        background: rgba(15, 15, 15, 0.8); 
+                        background: rgba(15, 15, 15, 0.7); 
                         padding: 1.5rem; 
                         border-radius: 4px; 
                         flex: 1; 
@@ -233,7 +243,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     .stat-box:hover {{
                         transform: translateY(-4px);
                         border-color: rgba(255, 85, 0, 0.3);
-                        background: rgba(25, 25, 25, 0.8);
+                        background: rgba(25, 25, 25, 0.75);
                     }}
                     .stat-box.active {{
                         border-color: var(--orange);
@@ -329,23 +339,23 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 <div id="bg-grid-1"></div>
                 <div id="bg-grid-2"></div>
                 
-                <!-- Security Shield Background -->
+                <!-- Security Shield Background (High Visibility) -->
                 <svg id="bg-shield" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50 5L15 20V50C15 70 30 88 50 95C70 88 85 70 85 50V20L50 5Z" stroke="rgba(255, 85, 0, 0.15)" stroke-width="2" />
-                    <path d="M50 12L22 24V48C22 64.5 34 79.5 50 85.5C66 79.5 78 64.5 78 48V24L50 12Z" stroke="rgba(255, 34, 34, 0.08)" stroke-width="1" />
+                    <path d="M50 5L15 20V50C15 70 30 88 50 95C70 88 85 70 85 50V20L50 5Z" stroke="rgba(255, 85, 0, 0.3)" stroke-width="2" />
+                    <path d="M50 12L22 24V48C22 64.5 34 79.5 50 85.5C66 79.5 78 64.5 78 48V24L50 12Z" stroke="rgba(255, 34, 34, 0.2)" stroke-width="1" />
                     <!-- Shield emblem crosses -->
-                    <path d="M50 25V65" stroke="rgba(255, 85, 0, 0.1)" stroke-width="1.5" />
-                    <path d="M35 40H65" stroke="rgba(255, 85, 0, 0.1)" stroke-width="1.5" />
+                    <path d="M50 25V65" stroke="rgba(255, 85, 0, 0.2)" stroke-width="1.5" />
+                    <path d="M35 40H65" stroke="rgba(255, 85, 0, 0.2)" stroke-width="1.5" />
                 </svg>
                 
                 <!-- Scanning Red Rays -->
                 <div class="red-ray-1"></div>
                 <div class="red-ray-2"></div>
                 
-                <!-- Orange Target Dots -->
-                <div class="target-dot" style="top: 18%; left: 7%;"></div>
-                <div class="target-dot" style="top: 48%; right: 9%;"></div>
-                <div class="target-dot" style="top: 80%; left: 14%;"></div>
+                <!-- Horizontal Scanning Waves Sweeping Down -->
+                <div class="wave-line" style="animation-delay: 0s; animation-duration: 7s;"></div>
+                <div class="wave-line" style="animation-delay: 2.5s; animation-duration: 9s;"></div>
+                <div class="wave-line" style="animation-delay: 5s; animation-duration: 8s;"></div>
 
                 <div class="container">
                     <header>
@@ -463,11 +473,24 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     </div>
                 </div>
                 <script>
+                    // Dynamically generate extra tactical target dots
+                    document.addEventListener("DOMContentLoaded", () => {
+                        const numDots = 24;
+                        for (let i = 0; i < numDots; i++) {
+                            const dot = document.createElement("div");
+                            dot.className = "target-dot";
+                            dot.style.top = (Math.random() * 90 + 5) + "%";
+                            dot.style.left = (Math.random() * 90 + 5) + "%";
+                            dot.style.animationDelay = (Math.random() * 2) + "s";
+                            document.body.appendChild(dot);
+                        }
+                    });
+
                     // Scroll Parallax & Rotation Handler
                     window.addEventListener('scroll', () => {
                         const scrolled = window.scrollY;
                         
-                        // Parallax Background Grids (More obvious opacity & speed)
+                        // Parallax Background Grids
                         const grid1 = document.getElementById('bg-grid-1');
                         const grid2 = document.getElementById('bg-grid-2');
                         if (grid1) {
