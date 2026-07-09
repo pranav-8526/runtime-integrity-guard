@@ -67,10 +67,25 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         padding: 1.5rem; 
                         border-radius: 12px; 
                         flex: 1; 
-                        transition: transform 0.2s;
+                        transition: all 0.2s;
+                        cursor: pointer;
+                        border: 2px solid transparent;
+                        user-select: none;
                     }}
                     .stat-box:hover {{
                         transform: translateY(-5px);
+                    }}
+                    .stat-box.active {{
+                        border-color: #38bdf8;
+                        background: #1e293b;
+                    }}
+                    .stat-box.active-blocked {{
+                        border-color: #ef4444;
+                        background: #1e293b;
+                    }}
+                    .stat-box.active-allowed {{
+                        border-color: #22c55e;
+                        background: #1e293b;
                     }}
                     .stat-number {{ 
                         font-size: 2.5rem; 
@@ -120,17 +135,17 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
             
             html_content += f"""
                     <div class="card stats">
-                        <div class="stat-box">
+                        <div class="stat-box active" id="stat-total" onclick="filterLogs('all')">
                             <div class="stat-number">{total}</div>
-                            <div style="color: #94a3b8">Total Messages</div>
+                            <div style="color: #94a3b8; font-weight: 500;">Total Messages</div>
                         </div>
-                        <div class="stat-box">
+                        <div class="stat-box" id="stat-blocked" onclick="filterLogs('BLOCK')">
                             <div class="stat-number blocked">{blocked}</div>
-                            <div style="color: #94a3b8">Threats Blocked</div>
+                            <div style="color: #94a3b8; font-weight: 500;">Threats Blocked</div>
                         </div>
-                        <div class="stat-box">
+                        <div class="stat-box" id="stat-allowed" onclick="filterLogs('ALLOW')">
                             <div class="stat-number allowed">{allowed}</div>
-                            <div style="color: #94a3b8">Safe Messages</div>
+                            <div style="color: #94a3b8; font-weight: 500;">Safe Messages</div>
                         </div>
                     </div>
                     
@@ -164,7 +179,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     
                     direction = html.escape(str(log.get('direction', '-')))
                     html_content += f"""
-                            <tr>
+                            <tr class="log-row" data-verdict="{verdict}">
                                 <td><span style="color: #94a3b8">{direction}</span></td>
                                 <td><span class="badge badge-{verdict}">{verdict}</span></td>
                                 <td class="reason-text">{reason}</td>
@@ -175,6 +190,34 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         </table>
                     </div>
                 </div>
+                <script>
+                    function filterLogs(filterType) {
+                        // 1. Reset all active states on stat boxes
+                        document.getElementById('stat-total').classList.remove('active');
+                        document.getElementById('stat-blocked').classList.remove('active-blocked');
+                        document.getElementById('stat-allowed').classList.remove('active-allowed');
+                        
+                        // 2. Add active class to clicked box
+                        if (filterType === 'all') {
+                            document.getElementById('stat-total').classList.add('active');
+                        } else if (filterType === 'BLOCK') {
+                            document.getElementById('stat-blocked').classList.add('active-blocked');
+                        } else if (filterType === 'ALLOW') {
+                            document.getElementById('stat-allowed').classList.add('active-allowed');
+                        }
+                        
+                        // 3. Show/hide table rows
+                        const rows = document.querySelectorAll('.log-row');
+                        rows.forEach(row => {
+                            const rowVerdict = row.getAttribute('data-verdict');
+                            if (filterType === 'all' || rowVerdict === filterType) {
+                                row.style.display = '';
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        });
+                    }
+                </script>
             </body>
             </html>
             """
