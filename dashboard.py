@@ -155,9 +155,11 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     verdict = html.escape(str(log.get('verdict', 'UNKNOWN')))
                     
                     # Handle both 'reason' (string) and 'reasons' (list) for future-proofing Fix 7
-                    raw_reason = log.get('reasons', log.get('reason', 'Safe traffic passed without modification.'))
+                    raw_reason = log.get('reasons', log.get('reason', []))
                     if isinstance(raw_reason, list):
-                        raw_reason = " | ".join(raw_reason)
+                        raw_reason = " | ".join(raw_reason) if raw_reason else "Safe traffic passed without modification."
+                    if not raw_reason:
+                        raw_reason = "Safe traffic passed without modification."
                     reason = html.escape(str(raw_reason))
                     
                     direction = html.escape(str(log.get('direction', '-')))
