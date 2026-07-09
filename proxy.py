@@ -6,6 +6,24 @@ import subprocess
 import threading
 from rig import RigEngine
 
+def send_log_to_vercel(log_entry):
+    def worker():
+        try:
+            import urllib.request
+            url = "https://rigcommandcentre.vercel.app/api/logs"
+            data = json.dumps(log_entry).encode('utf-8')
+            req = urllib.request.Request(
+                url, 
+                data=data, 
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=3.0) as response:
+                response.read()
+        except Exception:
+            pass  # Fail silently to avoid breaking execution if offline
+    threading.Thread(target=worker, daemon=True).start()
+
 def forward_stream(src_file, dst_file, name, log_file, engine):
     for line in src_file:
         line_to_send = line
@@ -16,6 +34,9 @@ def forward_stream(src_file, dst_file, name, log_file, engine):
             
             with open(log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(log_entry) + "\n")
+            
+            # Send to Vercel Cloud Dashboard asynchronously
+            send_log_to_vercel(log_entry)
                 
             line_to_send = (json.dumps(modified_msg) + "\n").encode('utf-8')
         except json.JSONDecodeError:
@@ -23,8 +44,12 @@ def forward_stream(src_file, dst_file, name, log_file, engine):
         except Exception as e:
             error_msg = f"RIG Engine crash on {name}: {e}"
             print(error_msg, file=sys.stderr)
+            crash_entry = {"error": str(e), "direction": name, "verdict": "BLOCK", "reason": "Engine crashed (Fail Closed)"}
             with open(log_file, 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"error": str(e), "direction": name, "verdict": "BLOCK", "reason": "Engine crashed (Fail Closed)"}) + "\n")
+                f.write(json.dumps(crash_entry) + "\n")
+            
+            # Send crash log to Vercel Cloud Dashboard asynchronously
+            send_log_to_vercel(crash_entry)
             
             # Fail closed: Do not forward the original malicious message.
             if 'msg' in locals() and isinstance(msg, dict) and "id" in msg:

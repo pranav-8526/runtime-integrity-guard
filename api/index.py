@@ -2,29 +2,77 @@ import json
 import os
 import html
 
-# WSGI standard entry point for Vercel Serverless Functions
+# In-memory storage cache to hold dynamically POSTed runtime logs in serverless container memory.
+# Serverless containers are transient, but this maintains live state within active instances.
+LIVE_LOGS_CACHE = []
+MAX_CACHE_SIZE = 50
+
 def app(environ, start_response):
-    # Retrieve audit.jsonl path relative to this script
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    audit_path = os.path.join(current_dir, "..", "audit.jsonl")
+    global LIVE_LOGS_CACHE
+    path = environ.get('PATH_INFO', '')
+    method = environ.get('REQUEST_METHOD', 'GET')
     
-    # Read audit.jsonl
-    logs = []
-    if os.path.exists(audit_path):
-        with open(audit_path, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    try:
-                        logs.append(json.loads(line))
-                    except:
-                        pass
-                        
-    # Pre-serialize logs to JS format for the modal lookup
-    recent_logs = list(reversed(logs[-30:]))
-    logs_js_json = json.dumps(recent_logs)
-    
-    # Build HTML Content
-    html_content = f"""<!DOCTYPE html>
+    # Check for POST endpoint to receive runtime logs from local proxy
+    if path == '/api/logs' and method == 'POST':
+        try:
+            request_body_size = int(environ.get('CONTENT_LENGTH', 0))
+            request_body = environ['wsgi.input'].read(request_body_size)
+            log_data = json.loads(request_body.decode('utf-8'))
+            
+            # Insert at the front of the cache
+            LIVE_LOGS_CACHE.insert(0, log_data)
+            if len(LIVE_LOGS_CACHE) > MAX_CACHE_SIZE:
+                LIVE_LOGS_CACHE = LIVE_LOGS_CACHE[:MAX_CACHE_SIZE]
+                
+            response = {"status": "success", "cached_logs_count": len(LIVE_LOGS_CACHE)}
+            response_encoded = json.dumps(response).encode('utf-8')
+            
+            status = '200 OK'
+            response_headers = [
+                ('Content-type', 'application/json'),
+                ('Content-Length', str(len(response_encoded)))
+            ]
+            start_response(status, response_headers)
+            return [response_encoded]
+        except Exception as e:
+            error_response = {"status": "error", "message": str(e)}
+            error_encoded = json.dumps(error_response).encode('utf-8')
+            status = '400 Bad Request'
+            response_headers = [
+                ('Content-type', 'application/json'),
+                ('Content-Length', str(len(error_encoded)))
+            ]
+            start_response(status, response_headers)
+            return [error_encoded]
+
+    # Handle standard GET dashboard UI request
+    if path == '/' or path == '':
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        audit_path = os.path.join(current_dir, "..", "audit.jsonl")
+        
+        # 1. Base log population from static file if present
+        static_logs = []
+        if os.path.exists(audit_path):
+            with open(audit_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        try:
+                            static_logs.append(json.loads(line))
+                        except:
+                            pass
+        static_logs = list(reversed(static_logs[-30:]))
+        
+        # 2. Merge static baseline logs with active live logs cache (deduplicated by timestamp or order)
+        all_logs = LIVE_LOGS_CACHE.copy()
+        
+        # Match structure of original static logs if in-memory cache is empty
+        if not all_logs:
+            all_logs = static_logs
+            
+        logs_js_json = json.dumps(all_logs)
+        
+        # Render HTML dashboard
+        html_content = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -435,11 +483,11 @@ def app(environ, start_response):
         </header>
 """
 
-    total = len(logs)
-    blocked = sum(1 for log in logs if log.get("verdict") == "BLOCK")
-    allowed = total - blocked
-    
-    html_content += f"""
+        total = len(all_logs)
+        blocked = sum(1 for log in all_logs if log.get("verdict") == "BLOCK")
+        allowed = total - blocked
+        
+        html_content += f"""
         <div class="card stats">
             <div class="stat-box active" id="stat-total" onclick="filterLogs('all')">
                 <div class="stat-number">{total}</div>
@@ -464,34 +512,34 @@ def app(environ, start_response):
                     <th>Action / Reason</th>
                 </tr>
 """
-    
-    if not logs:
-        html_content += """
+        
+        if not all_logs:
+            html_content += """
                 <tr>
                     <td colspan="3" style="text-align: center; color: #a1a1aa; padding: 2.5rem; font-family: 'Share Tech Mono', monospace;">NO ACTIVE LOG STREATED. RUN SYSTEM TRAFFIC...</td>
                 </tr>
 """
-    else:
-        for idx, log in enumerate(recent_logs):
-            verdict = html.escape(str(log.get('verdict', 'UNKNOWN')))
-            
-            raw_reason = log.get('reasons', log.get('reason', []))
-            if isinstance(raw_reason, list):
-                raw_reason = " | ".join(raw_reason) if raw_reason else "Safe traffic passed without modification."
-            if not raw_reason:
-                raw_reason = "Safe traffic passed without modification."
-            reason = html.escape(str(raw_reason))
-            direction = html.escape(str(log.get('direction', '-')))
-            
-            html_content += f"""
+        else:
+            for idx, log in enumerate(all_logs):
+                verdict = html.escape(str(log.get('verdict', 'UNKNOWN')))
+                
+                raw_reason = log.get('reasons', log.get('reason', []))
+                if isinstance(raw_reason, list):
+                    raw_reason = " | ".join(raw_reason) if raw_reason else "Safe traffic passed without modification."
+                if not raw_reason:
+                    raw_reason = "Safe traffic passed without modification."
+                reason = html.escape(str(raw_reason))
+                direction = html.escape(str(log.get('direction', '-')))
+                
+                html_content += f"""
                 <tr class="log-row" data-verdict="{verdict}" data-index="{idx}" onclick="showDetails({idx})">
                     <td><span style="color: #a1a1aa; font-family: 'Share Tech Mono', monospace;">{direction}</span></td>
                     <td><span class="badge badge-{verdict}">{verdict}</span></td>
                     <td class="reason-text">{reason}</td>
                 </tr>
-            """
-        
-    html_content += f"""
+                """
+            
+        html_content += f"""
             </table>
         </div>
     </div>
@@ -652,12 +700,17 @@ def app(environ, start_response):
     </script>
 </body>
 </html>"""
-    
-    html_content_encoded = html_content.encode("utf-8")
-    status = '200 OK'
-    response_headers = [
-        ('Content-type', 'text/html; charset=utf-8'),
-        ('Content-Length', str(len(html_content_encoded)))
-    ]
+        
+        html_content_encoded = html_content.encode("utf-8")
+        status = '200 OK'
+        response_headers = [
+            ('Content-type', 'text/html; charset=utf-8'),
+            ('Content-Length', str(len(html_content_encoded)))
+        ]
+        start_response(status, response_headers)
+        return [html_content_encoded]
+
+    status = '404 Not Found'
+    response_headers = [('Content-type', 'text/plain')]
     start_response(status, response_headers)
-    return [html_content_encoded]
+    return [b"Not Found"]
