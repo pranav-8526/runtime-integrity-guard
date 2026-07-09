@@ -112,7 +112,8 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         font-size: 0.85rem;
                         letter-spacing: 0.05em;
                     }}
-                    tr:hover {{ background: #334155; }}
+                    tr.log-row {{ cursor: pointer; }}
+                    tr.log-row:hover {{ background: #334155; }}
                     .badge {{
                         padding: 0.35rem 0.75rem; 
                         border-radius: 9999px; 
@@ -166,7 +167,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                             </tr>
                 """
             else:
-                for log in reversed(logs[-30:]): # Show last 30
+                for idx, log in enumerate(reversed(logs[-30:])): # Show last 30
                     verdict = html.escape(str(log.get('verdict', 'UNKNOWN')))
                     
                     # Handle both 'reason' (string) and 'reasons' (list) for future-proofing Fix 7
@@ -178,11 +179,52 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     reason = html.escape(str(raw_reason))
                     
                     direction = html.escape(str(log.get('direction', '-')))
+                    
+                    # Calculate Malicious Confidence Score & Detailed Explanation
+                    score = 0
+                    explanation = ""
+                    
+                    if verdict == "BLOCK":
+                        score = 100
+                        explanation = f"Critically blocked by RIG proxy engine. Reason: {reason}."
+                    else:
+                        # Scan raw message for suspicious words to calculate confidence
+                        msg_str = json.dumps(log.get('message', {}), ensure_ascii=False).lower()
+                        suspicious_terms = ["ssh", "env", "key", "password", "token", "secret", "override", "instruction", "exfiltrate", "dump", "export"]
+                        matched_terms = [t for t in suspicious_terms if t in msg_str]
+                        if matched_terms:
+                            score = min(90, 10 + len(matched_terms) * 10)
+                            explanation = f"Traffic allowed, but contains suspicious term(s) ({', '.join(matched_terms)}). Minor background risk detected."
+                        else:
+                            score = 5
+                            explanation = "Clean baseline traffic verified. No malicious indicators found."
+                            
+                    # Prettify raw JSON payload
+                    raw_msg_json = json.dumps(log.get('message', {}), indent=2, ensure_ascii=False)
+                    escaped_json = html.escape(raw_msg_json)
+                    
                     html_content += f"""
-                            <tr class="log-row" data-verdict="{verdict}">
+                            <tr class="log-row" data-verdict="{verdict}" data-index="{idx}" onclick="toggleDetails({idx})">
                                 <td><span style="color: #94a3b8">{direction}</span></td>
                                 <td><span class="badge badge-{verdict}">{verdict}</span></td>
                                 <td class="reason-text">{reason}</td>
+                            </tr>
+                            <tr class="detail-row" id="details-{idx}" style="display: none; background: #1e293b;">
+                                <td colspan="3" style="padding: 1.5rem; border-bottom: 1px solid #334155;">
+                                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <strong style="color: #f1f5f9;">🔍 Security Analysis & Breakdown</strong>
+                                            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+                                                Malicious Confidence: {score}%
+                                            </span>
+                                        </div>
+                                        <p style="margin: 0; color: #94a3b8; font-size: 0.95rem; line-height: 1.5;">{explanation}</p>
+                                        <div style="background: #0f172a; border-radius: 8px; padding: 1rem; border: 1px solid #334155; margin-top: 0.5rem;">
+                                            <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">Raw Intercepted JSON Payload</span>
+                                            <pre style="margin: 0; color: #38bdf8; font-family: monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 250px;">{escaped_json}</pre>
+                                        </div>
+                                    </div>
+                                </td>
                             </tr>
                     """
                 
@@ -210,12 +252,24 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         const rows = document.querySelectorAll('.log-row');
                         rows.forEach(row => {
                             const rowVerdict = row.getAttribute('data-verdict');
+                            const idx = row.getAttribute('data-index');
+                            const detailRow = document.getElementById('details-' + idx);
                             if (filterType === 'all' || rowVerdict === filterType) {
                                 row.style.display = '';
                             } else {
                                 row.style.display = 'none';
+                                if (detailRow) detailRow.style.display = 'none';
                             }
                         });
+                    }
+                    
+                    function toggleDetails(index) {
+                        const detailsRow = document.getElementById('details-' + index);
+                        if (detailsRow.style.display === 'none') {
+                            detailsRow.style.display = 'table-row';
+                        } else {
+                            detailsRow.style.display = 'none';
+                        }
                     }
                 </script>
             </body>
