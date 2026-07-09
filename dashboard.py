@@ -53,6 +53,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         min-height: 100vh;
                         overflow-x: hidden;
                         position: relative;
+                        perspective: 1200px; /* Enable 3D perspective */
                     }}
                     
                     /* Parallax Background Layers */
@@ -78,12 +79,12 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         will-change: transform;
                     }}
                     
-                    /* Vector Shield Background representing Security (Brightened) */
+                    /* Vector Shield Background (3D Y-axis Rotation) */
                     #bg-shield {{
                         position: fixed;
                         top: 50%;
                         left: 50%;
-                        transform: translate(-50%, -50%) rotate(0deg);
+                        transform: translate(-50%, -50%) rotateY(0deg);
                         width: 55vw;
                         height: 55vw;
                         max-width: 650px;
@@ -93,6 +94,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         pointer-events: none;
                         will-change: transform;
                         filter: drop-shadow(0 0 35px rgba(255, 85, 0, 0.45));
+                        transform-style: preserve-3d;
                     }}
                     
                     /* Scanning Red Rays */
@@ -501,10 +503,10 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                             grid2.style.transform = `translateY(${scrolled * 0.3}px)`;
                         }
                         
-                        // Rotates the security shield based on scroll amount
+                        // Rotates the security shield horizontally (left-to-right) based on scroll
                         const shield = document.getElementById('bg-shield');
                         if (shield) {
-                            shield.style.transform = `translate(-50%, -50%) rotate(${scrolled * 0.18}deg)`;
+                            shield.style.transform = `translate(-50%, -50%) rotateY(${scrolled * 0.3}deg)`;
                         }
                     });
 
