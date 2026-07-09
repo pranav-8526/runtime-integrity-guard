@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+audit.jsonl
+rug_pull_state.txt
+rig_baseline.json
