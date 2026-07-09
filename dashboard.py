@@ -30,35 +30,59 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>RIG Security Command Center</title>
+                <title>RIG Tactical Command Center</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
                 <style>
                     :root {{
-                        --bg-color: #030712;
-                        --card-bg: rgba(17, 24, 39, 0.85);
-                        --border-color: rgba(56, 189, 248, 0.2);
-                        --cyan: #00f0ff;
-                        --red: #ff3838;
-                        --green: #00ff66;
-                        --accent: #3b82f6;
+                        --bg-color: #020202;
+                        --card-bg: rgba(10, 10, 10, 0.95);
+                        --border-color: rgba(255, 85, 0, 0.2);
+                        --orange: #ff5500;
+                        --red: #ff2222;
+                        --muted-orange: rgba(255, 85, 0, 0.15);
+                        --muted-red: rgba(255, 34, 34, 0.15);
+                        --text-color: #e4e4e7;
                     }}
                     body {{ 
                         font-family: 'Outfit', sans-serif; 
                         background: var(--bg-color); 
-                        background-image: 
-                            radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0, transparent 50%),
-                            radial-gradient(at 100% 100%, rgba(0, 240, 255, 0.08) 0, transparent 50%);
-                        color: #f3f4f6; 
+                        color: var(--text-color); 
                         margin: 0; 
                         padding: 2rem; 
                         min-height: 100vh;
                         overflow-x: hidden;
+                        position: relative;
                     }}
+                    
+                    /* Parallax Background Layers */
+                    #bg-grid-1 {{
+                        position: fixed;
+                        top: -20%; left: -20%; width: 140%; height: 140%;
+                        background-image: 
+                            linear-gradient(rgba(255, 85, 0, 0.015) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(255, 85, 0, 0.015) 1px, transparent 1px);
+                        background-size: 60px 60px;
+                        z-index: 1;
+                        pointer-events: none;
+                        will-change: transform;
+                    }}
+                    #bg-grid-2 {{
+                        position: fixed;
+                        top: -20%; left: -20%; width: 140%; height: 140%;
+                        background-image: 
+                            radial-gradient(rgba(255, 34, 34, 0.02) 2px, transparent 2px);
+                        background-size: 100px 100px;
+                        z-index: 2;
+                        pointer-events: none;
+                        will-change: transform;
+                    }}
+                    
                     .container {{
                         max-width: 1000px;
                         margin: 0 auto;
                         position: relative;
+                        z-index: 10;
                     }}
                     header {{
                         display: flex;
@@ -70,21 +94,21 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     }}
                     .logo-section h1 {{ 
                         font-family: 'Share Tech Mono', monospace;
-                        color: var(--cyan); 
+                        color: var(--orange); 
                         margin: 0;
                         font-size: 2.2rem;
                         text-transform: uppercase;
                         letter-spacing: 2px;
-                        text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+                        text-shadow: 0 0 10px rgba(255, 85, 0, 0.4);
                         display: flex;
                         align-items: center;
                         gap: 0.75rem;
                     }}
                     .logo-section p {{
                         margin: 0.25rem 0 0 0;
-                        color: #6b7280;
+                        color: #71717a;
                         font-size: 0.85rem;
-                        letter-spacing: 1px;
+                        letter-spacing: 1.5px;
                         text-transform: uppercase;
                     }}
                     .system-status {{
@@ -93,45 +117,44 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         gap: 0.5rem;
                         font-family: 'Share Tech Mono', monospace;
                         font-size: 0.85rem;
-                        background: rgba(0, 255, 102, 0.07);
-                        border: 1px solid var(--green);
-                        color: var(--green);
+                        background: rgba(255, 85, 0, 0.07);
+                        border: 1px solid var(--orange);
+                        color: var(--orange);
                         padding: 0.5rem 1rem;
                         border-radius: 4px;
-                        box-shadow: 0 0 10px rgba(0, 255, 102, 0.15);
-                        animation: pulseStatus 2s infinite alternate;
+                        box-shadow: 0 0 10px rgba(255, 85, 0, 0.15);
+                        animation: pulseStatus 2.5s infinite alternate;
                     }}
                     @keyframes pulseStatus {{
-                        0% {{ box-shadow: 0 0 5px rgba(0, 255, 102, 0.15); border-color: rgba(0, 255, 102, 0.5); }}
-                        100% {{ box-shadow: 0 0 15px rgba(0, 255, 102, 0.4); border-color: var(--green); }}
+                        0% {{ box-shadow: 0 0 5px rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.4); }}
+                        100% {{ box-shadow: 0 0 15px rgba(255, 85, 0, 0.4); border-color: var(--orange); }}
                     }}
                     .card {{ 
                         background: var(--card-bg); 
-                        border-radius: 8px; 
+                        border-radius: 4px; 
                         padding: 1.5rem; 
                         margin-bottom: 1.5rem; 
-                        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-                        backdrop-filter: blur(8px);
+                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+                        backdrop-filter: blur(4px);
                         border: 1px solid var(--border-color);
                         position: relative;
-                        overflow: hidden;
                     }}
                     /* Cyberpunk HUD corners */
                     .card::before {{
                         content: "";
                         position: absolute;
-                        top: 0; left: 0;
+                        top: -1px; left: -1px;
                         width: 8px; height: 8px;
-                        border-top: 2px solid var(--cyan);
-                        border-left: 2px solid var(--cyan);
+                        border-top: 2px solid var(--orange);
+                        border-left: 2px solid var(--orange);
                     }}
                     .card::after {{
                         content: "";
                         position: absolute;
-                        bottom: 0; right: 0;
+                        bottom: -1px; right: -1px;
                         width: 8px; height: 8px;
-                        border-bottom: 2px solid var(--cyan);
-                        border-right: 2px solid var(--cyan);
+                        border-bottom: 2px solid var(--orange);
+                        border-right: 2px solid var(--orange);
                     }}
                     .stats {{ 
                         display: flex; 
@@ -140,50 +163,50 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     }}
                     .stat-box {{ 
                         text-align: center; 
-                        background: rgba(17, 24, 39, 0.6); 
+                        background: rgba(15, 15, 15, 0.8); 
                         padding: 1.5rem; 
-                        border-radius: 6px; 
+                        border-radius: 4px; 
                         flex: 1; 
                         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                         cursor: pointer;
-                        border: 1px solid rgba(255, 255, 255, 0.03);
+                        border: 1px solid rgba(255, 255, 255, 0.02);
                         user-select: none;
                     }}
                     .stat-box:hover {{
                         transform: translateY(-4px);
-                        border-color: rgba(0, 240, 255, 0.2);
-                        background: rgba(17, 24, 39, 0.8);
+                        border-color: rgba(255, 85, 0, 0.3);
+                        background: rgba(25, 25, 25, 0.8);
                     }}
                     .stat-box.active {{
-                        border-color: var(--cyan);
-                        box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
-                        background: rgba(0, 240, 255, 0.05);
+                        border-color: var(--orange);
+                        box-shadow: 0 0 15px rgba(255, 85, 0, 0.25);
+                        background: rgba(255, 85, 0, 0.05);
                     }}
                     .stat-box.active-blocked {{
                         border-color: var(--red);
-                        box-shadow: 0 0 15px rgba(255, 56, 56, 0.25);
-                        background: rgba(255, 56, 56, 0.05);
+                        box-shadow: 0 0 15px rgba(255, 34, 34, 0.25);
+                        background: rgba(255, 34, 34, 0.05);
                     }}
                     .stat-box.active-allowed {{
-                        border-color: var(--green);
-                        box-shadow: 0 0 15px rgba(0, 255, 102, 0.25);
-                        background: rgba(0, 255, 102, 0.05);
+                        border-color: var(--orange);
+                        box-shadow: 0 0 15px rgba(255, 85, 0, 0.2);
+                        background: rgba(255, 85, 0, 0.03);
                     }}
                     .stat-number {{ 
                         font-family: 'Share Tech Mono', monospace;
                         font-size: 2.8rem; 
                         font-weight: bold; 
-                        color: var(--cyan); 
+                        color: #ffffff; 
                         margin-bottom: 0.25rem;
-                        text-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+                        text-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
                     }}
                     .blocked {{ 
                         color: var(--red) !important;
-                        text-shadow: 0 0 8px rgba(255, 56, 56, 0.2) !important;
+                        text-shadow: 0 0 8px rgba(255, 34, 34, 0.25) !important;
                     }}
                     .allowed {{ 
-                        color: var(--green) !important;
-                        text-shadow: 0 0 8px rgba(0, 255, 102, 0.2) !important;
+                        color: var(--orange) !important;
+                        text-shadow: 0 0 8px rgba(255, 85, 0, 0.25) !important;
                     }}
                     
                     table {{ 
@@ -194,11 +217,11 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     th, td {{ 
                         padding: 1rem; 
                         text-align: left; 
-                        border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+                        border-bottom: 1px solid rgba(255, 85, 0, 0.05); 
                     }}
                     th {{ 
                         font-family: 'Share Tech Mono', monospace;
-                        color: #9ca3af; 
+                        color: #a1a1aa; 
                         text-transform: uppercase;
                         font-size: 0.85rem;
                         letter-spacing: 0.05em;
@@ -208,28 +231,28 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         transition: all 0.2s ease;
                     }}
                     tr.log-row:hover {{ 
-                        background: rgba(255, 255, 255, 0.02); 
+                        background: rgba(255, 85, 0, 0.02); 
                     }}
                     .badge {{
                         font-family: 'Share Tech Mono', monospace;
                         padding: 0.3rem 0.75rem; 
-                        border-radius: 4px; 
+                        border-radius: 2px; 
                         font-size: 0.8rem;
                         font-weight: bold;
                         letter-spacing: 0.05em;
                         display: inline-block;
                     }}
                     .badge-ALLOW {{ 
-                        background: rgba(0, 255, 102, 0.1); 
-                        color: var(--green); 
-                        border: 1px solid rgba(0, 255, 102, 0.2);
+                        background: rgba(255, 85, 0, 0.08); 
+                        color: var(--orange); 
+                        border: 1px solid rgba(255, 85, 0, 0.25);
                     }}
                     .badge-BLOCK {{ 
-                        background: rgba(255, 56, 56, 0.1); 
+                        background: rgba(255, 34, 34, 0.08); 
                         color: var(--red); 
-                        border: 1px solid rgba(255, 56, 56, 0.2);
+                        border: 1px solid rgba(255, 34, 34, 0.25);
                     }}
-                    .reason-text {{ color: #cbd5e1; font-family: monospace; font-size: 0.9rem; }}
+                    .reason-text {{ color: #d4d4d8; font-family: monospace; font-size: 0.9rem; }}
                     
                     @keyframes expandDrawer {{
                         from {{ opacity: 0; transform: translateY(-8px); }}
@@ -244,6 +267,10 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 </style>
             </head>
             <body>
+                <!-- Parallax background layers -->
+                <div id="bg-grid-1"></div>
+                <div id="bg-grid-2"></div>
+
                 <div class="container">
                     <header>
                         <div class="logo-section">
@@ -251,8 +278,8 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                             <p>Runtime Integrity Guard Security System</p>
                         </div>
                         <div class="system-status">
-                            <span style="width: 8px; height: 8px; background: var(--green); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--green);"></span>
-                            SECURE - MONITORING ACTIVE
+                            <span style="width: 8px; height: 8px; background: var(--orange); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--orange);"></span>
+                            MONITORING ACTIVE - SHIELD SECURE
                         </div>
                     </header>
             """
@@ -265,20 +292,20 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     <div class="card stats">
                         <div class="stat-box active" id="stat-total" onclick="filterLogs('all')">
                             <div class="stat-number">{total}</div>
-                            <div style="color: #9ca3af; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Total Messages</div>
+                            <div style="color: #a1a1aa; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Total Messages</div>
                         </div>
                         <div class="stat-box" id="stat-blocked" onclick="filterLogs('BLOCK')">
                             <div class="stat-number blocked">{blocked}</div>
-                            <div style="color: #9ca3af; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Threats Blocked</div>
+                            <div style="color: #a1a1aa; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Threats Blocked</div>
                         </div>
                         <div class="stat-box" id="stat-allowed" onclick="filterLogs('ALLOW')">
                             <div class="stat-number allowed">{allowed}</div>
-                            <div style="color: #9ca3af; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Safe Messages</div>
+                            <div style="color: #a1a1aa; font-weight: 500; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; text-transform: uppercase;">Safe Messages</div>
                         </div>
                     </div>
                     
                     <div class="card">
-                        <h2 style="margin-top: 0; color: #f1f5f9; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px; font-size: 1.3rem;">[ RECENT AUDIT LOGS ]</h2>
+                        <h2 style="margin-top: 0; color: #f4f4f5; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px; font-size: 1.3rem;">[ RECENT AUDIT LOGS ]</h2>
                         <table>
                             <tr>
                                 <th>Direction</th>
@@ -290,7 +317,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
             if not logs:
                 html_content += """
                             <tr>
-                                <td colspan="3" style="text-align: center; color: #94a3b8; padding: 2.5rem; font-family: 'Share Tech Mono', monospace;">NO ACTIVE LOG STREAMS DETECTED. RUN SYSTEM TRAFFIC...</td>
+                                <td colspan="3" style="text-align: center; color: #a1a1aa; padding: 2.5rem; font-family: 'Share Tech Mono', monospace;">NO ACTIVE LOG STREATED. RUN SYSTEM TRAFFIC...</td>
                             </tr>
                 """
             else:
@@ -332,23 +359,23 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     
                     html_content += f"""
                             <tr class="log-row" data-verdict="{verdict}" data-index="{idx}" onclick="toggleDetails({idx})">
-                                <td><span style="color: #94a3b8; font-family: 'Share Tech Mono', monospace;">{direction}</span></td>
+                                <td><span style="color: #a1a1aa; font-family: 'Share Tech Mono', monospace;">{direction}</span></td>
                                 <td><span class="badge badge-{verdict}">{verdict}</span></td>
                                 <td class="reason-text">{reason}</td>
                             </tr>
-                            <tr class="detail-row" id="details-{idx}" style="display: none; background: rgba(15, 23, 42, 0.65);">
-                                <td colspan="3" style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                            <tr class="detail-row" id="details-{idx}" style="display: none; background: rgba(12, 12, 12, 0.85);">
+                                <td colspan="3" style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 85, 0, 0.05);">
                                     <div class="detail-container">
                                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <strong style="color: #f1f5f9; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; letter-spacing: 1px;">🔍 SECURITY INTELLIGENCE ANALYSIS</strong>
-                                            <span class="badge" style="background: rgba(0, 240, 255, 0.1); color: var(--cyan); border: 1px solid rgba(0, 240, 255, 0.2);">
+                                            <strong style="color: #f4f4f5; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; letter-spacing: 1px;">🔍 SECURITY INTELLIGENCE ANALYSIS</strong>
+                                            <span class="badge" style="background: rgba(255, 85, 0, 0.1); color: var(--orange); border: 1px solid rgba(255, 85, 0, 0.2);">
                                                 MALICIOUS CONFIDENCE: {score}%
                                             </span>
                                         </div>
-                                        <p style="margin: 0; color: #94a3b8; font-size: 0.95rem; line-height: 1.5;">{explanation}</p>
-                                        <div style="background: #020617; border-radius: 4px; padding: 1.25rem; border: 1px solid rgba(255, 255, 255, 0.08); margin-top: 0.5rem; position: relative;">
-                                            <span style="font-size: 0.7rem; color: #6b7280; font-family: 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: 0.1rem; display: block; margin-bottom: 0.5rem;">[ INTERCEPTED DATA STREAM ]</span>
-                                            <pre style="margin: 0; color: var(--cyan); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 250px;">{escaped_json}</pre>
+                                        <p style="margin: 0; color: #a1a1aa; font-size: 0.95rem; line-height: 1.5;">{explanation}</p>
+                                        <div style="background: #000000; border-radius: 4px; padding: 1.25rem; border: 1px solid rgba(255, 85, 0, 0.12); margin-top: 0.5rem; position: relative;">
+                                            <span style="font-size: 0.7rem; color: #71717a; font-family: 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: 0.1rem; display: block; margin-bottom: 0.5rem;">[ INTERCEPTED DATA STREAM ]</span>
+                                            <pre style="margin: 0; color: var(--orange); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 250px;">{escaped_json}</pre>
                                         </div>
                                     </div>
                                 </td>
@@ -360,6 +387,19 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     </div>
                 </div>
                 <script>
+                    // Scroll Parallax Handler
+                    window.addEventListener('scroll', () => {
+                        const scrolled = window.scrollY;
+                        const grid1 = document.getElementById('bg-grid-1');
+                        const grid2 = document.getElementById('bg-grid-2');
+                        if (grid1) {
+                            grid1.style.transform = `translateY(${scrolled * 0.12}px) rotate(${scrolled * 0.005}deg)`;
+                        }
+                        if (grid2) {
+                            grid2.style.transform = `translateY(${scrolled * 0.25}px)`;
+                        }
+                    });
+
                     function filterLogs(filterType) {
                         // 1. Reset all active states on stat boxes
                         document.getElementById('stat-total').classList.remove('active');
