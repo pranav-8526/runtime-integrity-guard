@@ -53,6 +53,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         padding: 0;
                         background: var(--bg-color);
                         overflow-x: hidden;
+                        max-width: 100%;
                     }}
                     body {{ 
                         font-family: 'Outfit', sans-serif; 
@@ -64,32 +65,45 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         box-sizing: border-box;
                     }}
                     
+                    /* Scroll Lock class */
+                    body.modal-open {{
+                        overflow: hidden !important;
+                    }}
+                    
+                    /* Background Clipping Container to prevent extra scroll space */
+                    #cyber-background {{
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        overflow: hidden;
+                        pointer-events: none;
+                        z-index: 1;
+                    }}
+                    
                     /* Parallax Background Layers */
                     #bg-grid-1 {{
-                        position: fixed;
+                        position: absolute;
                         top: -20%; left: -20%; width: 140%; height: 140%;
                         background-image: 
                             linear-gradient(rgba(255, 85, 0, 0.05) 1px, transparent 1px),
                             linear-gradient(90deg, rgba(255, 85, 0, 0.05) 1px, transparent 1px);
                         background-size: 60px 60px;
-                        z-index: 1;
-                        pointer-events: none;
                         will-change: transform;
                     }}
                     #bg-grid-2 {{
-                        position: fixed;
+                        position: absolute;
                         top: -20%; left: -20%; width: 140%; height: 140%;
                         background-image: 
                             radial-gradient(rgba(255, 34, 34, 0.06) 2px, transparent 2px);
                         background-size: 80px 80px;
-                        z-index: 2;
-                        pointer-events: none;
                         will-change: transform;
                     }}
                     
                     /* Vector Shield Background (3D Y-axis Rotation) */
                     #bg-shield {{
-                        position: fixed;
+                        position: absolute;
                         top: 50%;
                         left: 50%;
                         transform: translate(-50%, -50%) rotateY(0deg);
@@ -98,8 +112,6 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         max-width: 650px;
                         max-height: 650px;
                         opacity: 0.58;
-                        z-index: 3;
-                        pointer-events: none;
                         will-change: transform;
                         filter: drop-shadow(0 0 35px rgba(255, 85, 0, 0.45));
                         transform-style: preserve-3d;
@@ -107,28 +119,22 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     
                     /* Scanning Red Rays */
                     .red-ray-1 {{
-                        position: fixed;
+                        position: absolute;
                         top: 0; left: 15%; width: 2px; height: 100%;
                         background: linear-gradient(180deg, transparent, rgba(255, 34, 34, 0.2) 30%, rgba(255, 34, 34, 0.2) 70%, transparent);
-                        z-index: 4;
-                        pointer-events: none;
                     }}
                     .red-ray-2 {{
-                        position: fixed;
+                        position: absolute;
                         top: 0; right: 20%; width: 1px; height: 100%;
                         background: linear-gradient(180deg, transparent, rgba(255, 34, 34, 0.15) 10%, rgba(255, 34, 34, 0.25) 60%, transparent);
-                        z-index: 4;
-                        pointer-events: none;
                     }}
                     
                     /* Horizontal Wave Lines sweeping left-to-right end */
                     .wave-line {{
-                        position: fixed;
+                        position: absolute;
                         left: 0; right: 0;
                         height: 2px;
                         background: linear-gradient(90deg, transparent, rgba(255, 85, 0, 0.25), rgba(255, 34, 34, 0.45), rgba(255, 85, 0, 0.25), transparent);
-                        z-index: 6;
-                        pointer-events: none;
                         animation: sweep 8s linear infinite;
                     }}
                     @keyframes sweep {{
@@ -140,14 +146,12 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     
                     /* Floating Orange Tactical Target Dots */
                     .target-dot {{
-                        position: fixed;
+                        position: absolute;
                         width: 5px;
                         height: 5px;
                         background: var(--orange);
                         border-radius: 50%;
                         box-shadow: 0 0 8px var(--orange);
-                        z-index: 5;
-                        pointer-events: none;
                         opacity: 0.7;
                         animation: pulseDot 2.2s infinite alternate;
                     }}
@@ -413,27 +417,29 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 </style>
             </head>
             <body>
-                <!-- Parallax background layers -->
-                <div id="bg-grid-1"></div>
-                <div id="bg-grid-2"></div>
-                
-                <!-- Security Shield Background (Brightened & High Visibility) -->
-                <svg id="bg-shield" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50 5L15 20V50C15 70 30 88 50 95C70 88 85 70 85 50V20L50 5Z" stroke="rgba(255, 85, 0, 0.45)" stroke-width="2.2" />
-                    <path d="M50 12L22 24V48C22 64.5 34 79.5 50 85.5C66 79.5 78 64.5 78 48V24L50 12Z" stroke="rgba(255, 34, 34, 0.3)" stroke-width="1.2" />
-                    <!-- Shield emblem crosses -->
-                    <path d="M50 25V65" stroke="rgba(255, 85, 0, 0.3)" stroke-width="1.8" />
-                    <path d="M35 40H65" stroke="rgba(255, 85, 0, 0.3)" stroke-width="1.8" />
-                </svg>
-                
-                <!-- Scanning Red Rays -->
-                <div class="red-ray-1"></div>
-                <div class="red-ray-2"></div>
-                
-                <!-- Horizontal Scanning Waves Sweeping Down -->
-                <div class="wave-line" style="animation-delay: 0s; animation-duration: 7s;"></div>
-                <div class="wave-line" style="animation-delay: 2.5s; animation-duration: 9s;"></div>
-                <div class="wave-line" style="animation-delay: 5s; animation-duration: 8s;"></div>
+                <!-- Clipping Background wrapper to prevent overflow scroll space -->
+                <div id="cyber-background">
+                    <div id="bg-grid-1"></div>
+                    <div id="bg-grid-2"></div>
+                    
+                    <!-- Security Shield Background -->
+                    <svg id="bg-shield" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 5L15 20V50C15 70 30 88 50 95C70 88 85 70 85 50V20L50 5Z" stroke="rgba(255, 85, 0, 0.45)" stroke-width="2.2" />
+                        <path d="M50 12L22 24V48C22 64.5 34 79.5 50 85.5C66 79.5 78 64.5 78 48V24L50 12Z" stroke="rgba(255, 34, 34, 0.3)" stroke-width="1.2" />
+                        <!-- Shield emblem crosses -->
+                        <path d="M50 25V65" stroke="rgba(255, 85, 0, 0.3)" stroke-width="1.8" />
+                        <path d="M35 40H65" stroke="rgba(255, 85, 0, 0.3)" stroke-width="1.8" />
+                    </svg>
+                    
+                    <!-- Scanning Red Rays -->
+                    <div class="red-ray-1"></div>
+                    <div class="red-ray-2"></div>
+                    
+                    <!-- Horizontal Scanning Waves Sweeping Down -->
+                    <div class="wave-line" style="animation-delay: 0s; animation-duration: 7s;"></div>
+                    <div class="wave-line" style="animation-delay: 2.5s; animation-duration: 9s;"></div>
+                    <div class="wave-line" style="animation-delay: 5s; animation-duration: 8s;"></div>
+                </div>
 
                 <div class="container">
                     <header>
@@ -536,16 +542,17 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 <script>
                     const logsData = {logs_js_json};
 
-                    // Dynamically generate extra tactical target dots
+                    // Dynamically generate extra tactical target dots inside the clipped background
                     document.addEventListener("DOMContentLoaded", () => {{
                         const numDots = 24;
+                        const bgContainer = document.getElementById("cyber-background");
                         for (let i = 0; i < numDots; i++) {{
                             const dot = document.createElement("div");
                             dot.className = "target-dot";
                             dot.style.top = (Math.random() * 90 + 5) + "%";
                             dot.style.left = (Math.random() * 90 + 5) + "%";
                             dot.style.animationDelay = (Math.random() * 2) + "s";
-                            document.body.appendChild(dot);
+                            bgContainer.appendChild(dot);
                         }}
                     }});
 
@@ -653,11 +660,17 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         // Open Modal
                         const modal = document.getElementById("security-modal");
                         modal.classList.add("active");
+                        
+                        // Scroll lock background
+                        document.body.classList.add("modal-open");
                     }}
 
                     function closeModal(event) {{
                         const modal = document.getElementById("security-modal");
                         modal.classList.remove("active");
+                        
+                        // Unlock scroll
+                        document.body.classList.remove("modal-open");
                     }}
                 </script>
             </body>
