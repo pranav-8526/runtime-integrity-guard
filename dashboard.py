@@ -36,7 +36,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 <style>
                     :root {{
                         --bg-color: #020202;
-                        --card-bg: rgba(10, 10, 10, 0.45);
+                        --card-bg: rgba(8, 8, 8, 0.25);
                         --border-color: rgba(255, 85, 0, 0.25);
                         --orange: #ff5500;
                         --red: #ff2222;
@@ -78,7 +78,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         will-change: transform;
                     }}
                     
-                    /* Vector Shield Background representing Security (High Visibility) */
+                    /* Vector Shield Background representing Security (Brightened) */
                     #bg-shield {{
                         position: fixed;
                         top: 50%;
@@ -88,11 +88,11 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         height: 55vw;
                         max-width: 650px;
                         max-height: 650px;
-                        opacity: 0.38;
+                        opacity: 0.58;
                         z-index: 3;
                         pointer-events: none;
                         will-change: transform;
-                        filter: drop-shadow(0 0 35px rgba(255, 85, 0, 0.35));
+                        filter: drop-shadow(0 0 35px rgba(255, 85, 0, 0.45));
                     }}
                     
                     /* Scanning Red Rays */
@@ -154,11 +154,12 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     }}
                     header {{
                         display: flex;
-                        justify-content: space-between;
+                        justify-content: flex-start;
                         align-items: center;
                         margin-bottom: 2.5rem;
                         border-bottom: 2px solid var(--border-color);
                         padding-bottom: 1.5rem;
+                        gap: 2rem;
                     }}
                     .logo-section h1 {{ 
                         font-family: 'Share Tech Mono', monospace;
@@ -168,9 +169,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         text-transform: uppercase;
                         letter-spacing: 2px;
                         text-shadow: 0 0 10px rgba(255, 85, 0, 0.4);
-                        display: flex;
-                        align-items: center;
-                        gap: 0.75rem;
+                        text-align: left;
                     }}
                     .logo-section p {{
                         margin: 0.25rem 0 0 0;
@@ -178,6 +177,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         font-size: 0.85rem;
                         letter-spacing: 1.5px;
                         text-transform: uppercase;
+                        text-align: left;
                     }}
                     .system-status {{
                         display: flex;
@@ -192,6 +192,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         border-radius: 4px;
                         box-shadow: 0 0 10px rgba(255, 85, 0, 0.15);
                         animation: pulseStatus 2.5s infinite alternate;
+                        margin-left: auto;
                     }}
                     @keyframes pulseStatus {{
                         0% {{ box-shadow: 0 0 5px rgba(255, 85, 0, 0.15); border-color: rgba(255, 85, 0, 0.4); }}
@@ -231,7 +232,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     }}
                     .stat-box {{ 
                         text-align: center; 
-                        background: rgba(15, 15, 15, 0.7); 
+                        background: rgba(15, 15, 15, 0.5); 
                         padding: 1.5rem; 
                         border-radius: 4px; 
                         flex: 1; 
@@ -243,7 +244,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     .stat-box:hover {{
                         transform: translateY(-4px);
                         border-color: rgba(255, 85, 0, 0.3);
-                        background: rgba(25, 25, 25, 0.75);
+                        background: rgba(25, 25, 25, 0.6);
                     }}
                     .stat-box.active {{
                         border-color: var(--orange);
@@ -339,13 +340,13 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 <div id="bg-grid-1"></div>
                 <div id="bg-grid-2"></div>
                 
-                <!-- Security Shield Background (High Visibility) -->
+                <!-- Security Shield Background (Brightened & High Visibility) -->
                 <svg id="bg-shield" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50 5L15 20V50C15 70 30 88 50 95C70 88 85 70 85 50V20L50 5Z" stroke="rgba(255, 85, 0, 0.3)" stroke-width="2" />
-                    <path d="M50 12L22 24V48C22 64.5 34 79.5 50 85.5C66 79.5 78 64.5 78 48V24L50 12Z" stroke="rgba(255, 34, 34, 0.2)" stroke-width="1" />
+                    <path d="M50 5L15 20V50C15 70 30 88 50 95C70 88 85 70 85 50V20L50 5Z" stroke="rgba(255, 85, 0, 0.45)" stroke-width="2.2" />
+                    <path d="M50 12L22 24V48C22 64.5 34 79.5 50 85.5C66 79.5 78 64.5 78 48V24L50 12Z" stroke="rgba(255, 34, 34, 0.3)" stroke-width="1.2" />
                     <!-- Shield emblem crosses -->
-                    <path d="M50 25V65" stroke="rgba(255, 85, 0, 0.2)" stroke-width="1.5" />
-                    <path d="M35 40H65" stroke="rgba(255, 85, 0, 0.2)" stroke-width="1.5" />
+                    <path d="M50 25V65" stroke="rgba(255, 85, 0, 0.3)" stroke-width="1.8" />
+                    <path d="M35 40H65" stroke="rgba(255, 85, 0, 0.3)" stroke-width="1.8" />
                 </svg>
                 
                 <!-- Scanning Red Rays -->
@@ -360,7 +361,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 <div class="container">
                     <header>
                         <div class="logo-section">
-                            <h1>🛡️ RIG Command Center</h1>
+                            <h1>RIG Command Center</h1>
                             <p>Runtime Integrity Guard Security System</p>
                         </div>
                         <div class="system-status">
