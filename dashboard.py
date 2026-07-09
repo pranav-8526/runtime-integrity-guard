@@ -65,9 +65,10 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         box-sizing: border-box;
                     }}
                     
-                    /* Scroll Lock class */
-                    body.modal-open {{
+                    /* Strict Scroll Lock class on both HTML & Body */
+                    html.modal-open, body.modal-open {{
                         overflow: hidden !important;
+                        height: 100vh !important;
                     }}
                     
                     /* Background Clipping Container to prevent extra scroll space */
@@ -558,6 +559,11 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
 
                     // Scroll Parallax & Rotation Handler
                     window.addEventListener('scroll', () => {{
+                        // Prevent grid/shield translations when modal lock is active
+                        if (document.body.classList.contains("modal-open")) {{
+                            return;
+                        }}
+                        
                         const scrolled = window.scrollY;
                         
                         // Parallax Background Grids
@@ -663,6 +669,11 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         
                         // Scroll lock background
                         document.body.classList.add("modal-open");
+                        document.documentElement.classList.add("modal-open");
+                        
+                        // Add listeners to strictly block scrolling outside the modal
+                        window.addEventListener('wheel', preventScroll, {{ passive: false }});
+                        window.addEventListener('touchmove', preventScroll, {{ passive: false }});
                     }}
 
                     function closeModal(event) {{
@@ -671,6 +682,20 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         
                         // Unlock scroll
                         document.body.classList.remove("modal-open");
+                        document.documentElement.classList.remove("modal-open");
+                        
+                        // Restore scroll events
+                        window.removeEventListener('wheel', preventScroll, {{ passive: false }});
+                        window.removeEventListener('touchmove', preventScroll, {{ passive: false }});
+                    }}
+
+                    function preventScroll(e) {{
+                        const modalContent = document.querySelector('.modal-content');
+                        if (modalContent && modalContent.contains(e.target)) {{
+                            // Allow scroll inside the modal code preview block if target is scrollable
+                            return;
+                        }}
+                        e.preventDefault();
                     }}
                 </script>
             </body>
