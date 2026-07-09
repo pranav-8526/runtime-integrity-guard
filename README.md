@@ -45,10 +45,6 @@ After running the tests, see exactly what RIG caught:
 ```bash
 python rig_report.py
 ```
-Or you can start the web dashboard:
-```bash
-python dashboard.py
-```
 
 ## Running against a real MCP Server with Claude Desktop
 
