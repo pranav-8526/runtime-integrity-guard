@@ -541,7 +541,7 @@ if __name__ == "__main__":
     print(f"Starting dashboard server...")
     print(f"Access your dashboard at: http://127.0.0.1:{PORT}")
     try:
-        with socketserver.TCPServer(("127.0.0.1", PORT), RIGDashboardHandler) as httpd:
+        with socketserver.ThreadingTCPServer(("127.0.0.1", PORT), RIGDashboardHandler) as httpd:
             httpd.serve_forever()
     except KeyboardInterrupt:
         print("\nShutting down server.")
