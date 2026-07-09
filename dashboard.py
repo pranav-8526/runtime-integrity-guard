@@ -4,7 +4,7 @@ import json
 import os
 import html
 
-PORT = 3000
+PORT = 3001
 
 class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
