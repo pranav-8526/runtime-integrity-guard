@@ -24,6 +24,10 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                             except:
                                 pass
                                 
+            # Pre-serialize logs to JS format for the modal lookup
+            recent_logs = list(reversed(logs[-30:]))
+            logs_js_json = json.dumps(recent_logs)
+            
             # Build HTML
             html_content = f"""
             <!DOCTYPE html>
@@ -44,16 +48,20 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         --muted-red: rgba(255, 34, 34, 0.15);
                         --text-color: #e4e4e7;
                     }}
+                    html, body {{
+                        margin: 0;
+                        padding: 0;
+                        background: var(--bg-color);
+                        overflow-x: hidden;
+                    }}
                     body {{ 
                         font-family: 'Outfit', sans-serif; 
-                        background: var(--bg-color); 
                         color: var(--text-color); 
-                        margin: 0; 
-                        padding: 2rem; 
+                        padding: 2rem 2rem 3rem 2rem; 
                         min-height: 100vh;
-                        overflow-x: hidden;
                         position: relative;
                         perspective: 1200px; /* Enable 3D perspective */
+                        box-sizing: border-box;
                     }}
                     
                     /* Parallax Background Layers */
@@ -325,15 +333,82 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     }}
                     .reason-text {{ color: #d4d4d8; font-family: monospace; font-size: 0.9rem; }}
                     
-                    @keyframes expandDrawer {{
-                        from {{ opacity: 0; transform: translateY(-8px); }}
-                        to {{ opacity: 1; transform: translateY(0); }}
-                    }}
-                    .detail-container {{
+                    /* Premium Cyber Modal Styles */
+                    .modal-overlay {{
+                        position: fixed;
+                        top: 0; left: 0; width: 100vw; height: 100vh;
+                        background: rgba(2, 2, 2, 0.75);
+                        backdrop-filter: blur(12px);
+                        z-index: 1000;
                         display: flex;
-                        flex-direction: column;
-                        gap: 1rem;
-                        animation: expandDrawer 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                        justify-content: center;
+                        align-items: center;
+                        opacity: 0;
+                        pointer-events: none;
+                        transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+                    }}
+                    .modal-overlay.active {{
+                        opacity: 1;
+                        pointer-events: auto;
+                    }}
+                    .modal-content {{
+                        background: rgba(10, 10, 10, 0.95);
+                        border: 1px solid var(--border-color);
+                        width: 90%;
+                        max-width: 680px;
+                        border-radius: 6px;
+                        box-shadow: 0 0 50px rgba(255, 85, 0, 0.35);
+                        padding: 2.2rem;
+                        position: relative;
+                        transform: scale(0.85) translateY(30px);
+                        transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    }}
+                    .modal-overlay.active .modal-content {{
+                        transform: scale(1) translateY(0);
+                    }}
+                    .modal-content::before {{
+                        content: "";
+                        position: absolute;
+                        top: -1px; left: -1px;
+                        width: 14px; height: 14px;
+                        border-top: 3px solid var(--orange);
+                        border-left: 3px solid var(--orange);
+                    }}
+                    .modal-content::after {{
+                        content: "";
+                        position: absolute;
+                        bottom: -1px; right: -1px;
+                        width: 14px; height: 14px;
+                        border-bottom: 3px solid var(--orange);
+                        border-right: 3px solid var(--orange);
+                    }}
+                    .modal-header {{
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 1px solid rgba(255, 85, 0, 0.15);
+                        padding-bottom: 1rem;
+                        margin-bottom: 1.5rem;
+                    }}
+                    .modal-title {{
+                        font-family: 'Share Tech Mono', monospace;
+                        font-size: 1.15rem;
+                        color: var(--orange);
+                        letter-spacing: 1.5px;
+                        text-shadow: 0 0 8px rgba(255, 85, 0, 0.4);
+                    }}
+                    .modal-close {{
+                        background: transparent;
+                        border: none;
+                        color: #a1a1aa;
+                        font-size: 1.8rem;
+                        cursor: pointer;
+                        line-height: 1;
+                        transition: color 0.2s ease, transform 0.2s ease;
+                    }}
+                    .modal-close:hover {{
+                        color: var(--red);
+                        transform: scale(1.15);
                     }}
                 </style>
             </head>
@@ -410,7 +485,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                             </tr>
                 """
             else:
-                for idx, log in enumerate(reversed(logs[-30:])): # Show last 30
+                for idx, log in enumerate(recent_logs):
                     verdict = html.escape(str(log.get('verdict', 'UNKNOWN')))
                     
                     # Handle both 'reason' (string) and 'reasons' (list) for future-proofing Fix 7
@@ -423,138 +498,167 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     
                     direction = html.escape(str(log.get('direction', '-')))
                     
-                    # Calculate Malicious Confidence Score & Detailed Explanation
-                    score = 0
-                    explanation = ""
-                    
-                    if verdict == "BLOCK":
-                        score = 100
-                        explanation = f"RIG mitigation engine triggered hard block: {reason}."
-                    else:
-                        # Scan raw message for suspicious words to calculate confidence
-                        msg_str = json.dumps(log.get('message', {}), ensure_ascii=False).lower()
-                        suspicious_terms = ["ssh", "env", "key", "password", "token", "secret", "override", "instruction", "exfiltrate", "dump", "export"]
-                        matched_terms = [t for t in suspicious_terms if t in msg_str]
-                        if matched_terms:
-                            score = min(90, 10 + len(matched_terms) * 10)
-                            explanation = f"Inspection completed: Traffic allowed, but detected suspicious cyber context terms ({', '.join(matched_terms)}). Monitoring payload closely."
-                        else:
-                            score = 5
-                            explanation = "Inspection completed: Safe baseline traffic validated. Zero threat indicators found."
-                            
-                    # Prettify raw JSON payload
-                    raw_msg_json = json.dumps(log.get('message', {}), indent=2, ensure_ascii=False)
-                    escaped_json = html.escape(raw_msg_json)
-                    
                     html_content += f"""
-                            <tr class="log-row" data-verdict="{verdict}" data-index="{idx}" onclick="toggleDetails({idx})">
+                            <tr class="log-row" data-verdict="{verdict}" data-index="{idx}" onclick="showDetails({idx})">
                                 <td><span style="color: #a1a1aa; font-family: 'Share Tech Mono', monospace;">{direction}</span></td>
                                 <td><span class="badge badge-{verdict}">{verdict}</span></td>
                                 <td class="reason-text">{reason}</td>
                             </tr>
-                            <tr class="detail-row" id="details-{idx}" style="display: none; background: rgba(12, 12, 12, 0.85);">
-                                <td colspan="3" style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 85, 0, 0.05);">
-                                    <div class="detail-container">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <strong style="color: #f4f4f5; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; letter-spacing: 1px;">🔍 SECURITY INTELLIGENCE ANALYSIS</strong>
-                                            <span class="badge" style="background: rgba(255, 85, 0, 0.1); color: var(--orange); border: 1px solid rgba(255, 85, 0, 0.2);">
-                                                MALICIOUS CONFIDENCE: {score}%
-                                            </span>
-                                        </div>
-                                        <p style="margin: 0; color: #a1a1aa; font-size: 0.95rem; line-height: 1.5;">{explanation}</p>
-                                        <div style="background: #000000; border-radius: 4px; padding: 1.25rem; border: 1px solid rgba(255, 85, 0, 0.12); margin-top: 0.5rem; position: relative;">
-                                            <span style="font-size: 0.7rem; color: #71717a; font-family: 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: 0.1rem; display: block; margin-bottom: 0.5rem;">[ INTERCEPTED DATA STREAM ]</span>
-                                            <pre style="margin: 0; color: var(--red); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 250px;">{escaped_json}</pre>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
                     """
                 
-            html_content += """
+            html_content += f"""
                         </table>
                     </div>
                 </div>
+
+                <!-- Premium Cyber Security Intelligence Modal Popup -->
+                <div id="security-modal" class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal-content" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <span class="modal-title">🔍 SECURITY INTELLIGENCE ANALYSIS</span>
+                            <button class="modal-close" onclick="closeModal(event)">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; justify-content: flex-start;">
+                                <span id="modal-direction" class="badge">DIRECTION</span>
+                                <span id="modal-verdict" class="badge">VERDICT</span>
+                                <span id="modal-confidence" class="badge" style="background: rgba(255, 85, 0, 0.1); color: var(--orange); border: 1px solid rgba(255, 85, 0, 0.2);">CONFIDENCE</span>
+                            </div>
+                            <p id="modal-explanation" style="margin: 0 0 1.5rem 0; color: #d4d4d8; font-size: 0.95rem; line-height: 1.6; font-family: 'Outfit', sans-serif;"></p>
+                            <div style="background: #000000; border-radius: 4px; padding: 1.25rem; border: 1px solid rgba(255, 85, 0, 0.12); position: relative;">
+                                <span style="font-size: 0.7rem; color: #71717a; font-family: 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: 0.1rem; display: block; margin-bottom: 0.5rem;">[ INTERCEPTED DATA STREAM ]</span>
+                                <pre id="modal-json" style="margin: 0; color: var(--red); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 300px;"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <script>
+                    const logsData = {logs_js_json};
+
                     // Dynamically generate extra tactical target dots
-                    document.addEventListener("DOMContentLoaded", () => {
+                    document.addEventListener("DOMContentLoaded", () => {{
                         const numDots = 24;
-                        for (let i = 0; i < numDots; i++) {
+                        for (let i = 0; i < numDots; i++) {{
                             const dot = document.createElement("div");
                             dot.className = "target-dot";
                             dot.style.top = (Math.random() * 90 + 5) + "%";
                             dot.style.left = (Math.random() * 90 + 5) + "%";
                             dot.style.animationDelay = (Math.random() * 2) + "s";
                             document.body.appendChild(dot);
-                        }
-                    });
+                        }}
+                    }});
 
                     // Scroll Parallax & Rotation Handler
-                    window.addEventListener('scroll', () => {
+                    window.addEventListener('scroll', () => {{
                         const scrolled = window.scrollY;
                         
                         // Parallax Background Grids
                         const grid1 = document.getElementById('bg-grid-1');
                         const grid2 = document.getElementById('bg-grid-2');
-                        if (grid1) {
-                            grid1.style.transform = `translateY(${scrolled * 0.15}px) rotate(${scrolled * 0.008}deg)`;
-                        }
-                        if (grid2) {
-                            grid2.style.transform = `translateY(${scrolled * 0.3}px)`;
-                        }
+                        if (grid1) {{
+                            grid1.style.transform = `translateY(${{scrolled * 0.15}}px) rotate(${{scrolled * 0.008}}deg)`;
+                        }}
+                        if (grid2) {{
+                            grid2.style.transform = `translateY(${{scrolled * 0.3}}px)`;
+                        }}
                         
                         // Rotates the security shield horizontally (left-to-right) based on scroll
                         const shield = document.getElementById('bg-shield');
-                        if (shield) {
-                            shield.style.transform = `translate(-50%, -50%) rotateY(${scrolled * 0.3}deg)`;
-                        }
-                    });
+                        if (shield) {{
+                            shield.style.transform = `translate(-50%, -50%) rotateY(${{scrolled * 0.3}}deg)`;
+                        }}
+                    }});
 
-                    function filterLogs(filterType) {
+                    function filterLogs(filterType) {{
                         // 1. Reset all active states on stat boxes
                         document.getElementById('stat-total').classList.remove('active');
                         document.getElementById('stat-blocked').classList.remove('active-blocked');
                         document.getElementById('stat-allowed').classList.remove('active-allowed');
                         
                         // 2. Add active class to clicked box
-                        if (filterType === 'all') {
+                        if (filterType === 'all') {{
                             document.getElementById('stat-total').classList.add('active');
-                        } else if (filterType === 'BLOCK') {
+                        }} else if (filterType === 'BLOCK') {{
                             document.getElementById('stat-blocked').classList.add('active-blocked');
-                        } else if (filterType === 'ALLOW') {
+                        }} else if (filterType === 'ALLOW') {{
                             document.getElementById('stat-allowed').classList.add('active-allowed');
-                        }
+                        }}
                         
                         // 3. Show/hide table rows
                         const rows = document.querySelectorAll('.log-row');
-                        rows.forEach(row => {
+                        rows.forEach(row => {{
                             const rowVerdict = row.getAttribute('data-verdict');
-                            const idx = row.getAttribute('data-index');
-                            const detailRow = document.getElementById('details-' + idx);
-                            if (filterType === 'all' || rowVerdict === filterType) {
+                            if (filterType === 'all' || rowVerdict === filterType) {{
                                 row.style.display = '';
-                            } else {
+                            }} else {{
                                 row.style.display = 'none';
-                                if (detailRow) detailRow.style.display = 'none';
-                            }
-                        });
-                    }
+                            }}
+                        }});
+                    }}
                     
-                    function toggleDetails(index) {
-                        const detailsRow = document.getElementById('details-' + index);
-                        if (detailsRow.style.display === 'none') {
-                            detailsRow.style.display = 'table-row';
-                            // Smooth animation trigger
-                            const detailContainer = detailsRow.querySelector('.detail-container');
-                            if (detailContainer) {
-                                detailContainer.style.animation = 'none';
-                                detailContainer.offsetHeight; /* trigger reflow */
-                                detailContainer.style.animation = null;
-                            }
-                        } else {
-                            detailsRow.style.display = 'none';
-                        }
-                    }
+                    function showDetails(idx) {{
+                        const log = logsData[idx];
+                        if (!log) return;
+                        
+                        // Update Direction
+                        const dir = log.direction || "-";
+                        const dirBadge = document.getElementById("modal-direction");
+                        dirBadge.textContent = dir;
+                        dirBadge.className = "badge badge-ALLOW";
+                        
+                        // Update Verdict
+                        const verdict = log.verdict || "UNKNOWN";
+                        const verdictBadge = document.getElementById("modal-verdict");
+                        verdictBadge.textContent = verdict;
+                        verdictBadge.className = "badge badge-" + verdict;
+                        
+                        // Calculate Score & Explanation
+                        let score = 0;
+                        let explanation = "";
+                        
+                        let rawReason = log.reasons || log.reason || [];
+                        if (Array.isArray(rawReason)) {{
+                            rawReason = rawReason.join(" | ");
+                        }}
+                        if (!rawReason) {{
+                            rawReason = "Safe traffic passed without modification.";
+                        }}
+                        
+                        if (verdict === "BLOCK") {{
+                            score = 100;
+                            explanation = "RIG mitigation engine triggered hard block: " + rawReason + ".";
+                        }} else {{
+                            const msgStr = JSON.stringify(log.message || {{}}).toLowerCase();
+                            const suspiciousTerms = ["ssh", "env", "key", "password", "token", "secret", "override", "instruction", "exfiltrate", "dump", "export"];
+                            const matchedTerms = suspiciousTerms.filter(t => msgStr.includes(t));
+                            if (matchedTerms.length > 0) {{
+                                score = Math.min(90, 10 + matchedTerms.length * 10);
+                                explanation = "Inspection completed: Traffic allowed, but detected suspicious cyber context terms (" + matchedTerms.join(", ") + "). Monitoring payload closely.";
+                            }} else {{
+                                score = 5;
+                                explanation = "Inspection completed: Safe baseline traffic validated. Zero threat indicators found.";
+                            }}
+                        }}
+                        
+                        // Set Confidence
+                        document.getElementById("modal-confidence").textContent = "MALICIOUS CONFIDENCE: " + score + "%";
+                        
+                        // Set Explanation
+                        document.getElementById("modal-explanation").textContent = explanation;
+                        
+                        // Set JSON
+                        document.getElementById("modal-json").textContent = JSON.stringify(log.message || {{}}, null, 2);
+                        
+                        // Open Modal
+                        const modal = document.getElementById("security-modal");
+                        modal.classList.add("active");
+                    }}
+
+                    function closeModal(event) {{
+                        const modal = document.getElementById("security-modal");
+                        modal.classList.remove("active");
+                    }}
                 </script>
             </body>
             </html>
