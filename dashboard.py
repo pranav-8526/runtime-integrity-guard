@@ -36,8 +36,8 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 <style>
                     :root {{
                         --bg-color: #020202;
-                        --card-bg: rgba(10, 10, 10, 0.95);
-                        --border-color: rgba(255, 85, 0, 0.2);
+                        --card-bg: rgba(10, 10, 10, 0.96);
+                        --border-color: rgba(255, 85, 0, 0.25);
                         --orange: #ff5500;
                         --red: #ff2222;
                         --muted-orange: rgba(255, 85, 0, 0.15);
@@ -60,8 +60,8 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         position: fixed;
                         top: -20%; left: -20%; width: 140%; height: 140%;
                         background-image: 
-                            linear-gradient(rgba(255, 85, 0, 0.015) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(255, 85, 0, 0.015) 1px, transparent 1px);
+                            linear-gradient(rgba(255, 85, 0, 0.05) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(255, 85, 0, 0.05) 1px, transparent 1px);
                         background-size: 60px 60px;
                         z-index: 1;
                         pointer-events: none;
@@ -71,11 +71,69 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                         position: fixed;
                         top: -20%; left: -20%; width: 140%; height: 140%;
                         background-image: 
-                            radial-gradient(rgba(255, 34, 34, 0.02) 2px, transparent 2px);
-                        background-size: 100px 100px;
+                            radial-gradient(rgba(255, 34, 34, 0.06) 2px, transparent 2px);
+                        background-size: 80px 80px;
                         z-index: 2;
                         pointer-events: none;
                         will-change: transform;
+                    }}
+                    
+                    /* Vector Shield Background representing Security */
+                    #bg-shield {{
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%) rotate(0deg);
+                        width: 55vw;
+                        height: 55vw;
+                        max-width: 650px;
+                        max-height: 650px;
+                        opacity: 0.15;
+                        z-index: 3;
+                        pointer-events: none;
+                        will-change: transform;
+                        filter: drop-shadow(0 0 25px rgba(255, 85, 0, 0.2));
+                    }}
+                    
+                    /* Scanning Red Rays */
+                    .red-ray-1 {{
+                        position: fixed;
+                        top: 0; left: 15%; width: 2px; height: 100%;
+                        background: linear-gradient(180deg, transparent, rgba(255, 34, 34, 0.2) 30%, rgba(255, 34, 34, 0.2) 70%, transparent);
+                        z-index: 4;
+                        pointer-events: none;
+                    }}
+                    .red-ray-2 {{
+                        position: fixed;
+                        top: 0; right: 20%; width: 1px; height: 100%;
+                        background: linear-gradient(180deg, transparent, rgba(255, 34, 34, 0.15) 10%, rgba(255, 34, 34, 0.25) 60%, transparent);
+                        z-index: 4;
+                        pointer-events: none;
+                    }}
+                    
+                    /* Floating Orange Tactical Target Dots */
+                    .target-dot {{
+                        position: fixed;
+                        width: 6px;
+                        height: 6px;
+                        background: var(--orange);
+                        border-radius: 50%;
+                        box-shadow: 0 0 10px var(--orange);
+                        z-index: 5;
+                        pointer-events: none;
+                        opacity: 0.7;
+                    }}
+                    .target-dot::after {{
+                        content: '';
+                        position: absolute;
+                        top: -4px; left: -4px; right: -4px; bottom: -4px;
+                        border: 1px solid var(--orange);
+                        border-radius: 50%;
+                        animation: pulseDot 2s infinite;
+                    }}
+                    @keyframes pulseDot {{
+                        0% {{ transform: scale(0.8); opacity: 0.8; }}
+                        100% {{ transform: scale(2); opacity: 0; }}
                     }}
                     
                     .container {{
@@ -270,6 +328,24 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                 <!-- Parallax background layers -->
                 <div id="bg-grid-1"></div>
                 <div id="bg-grid-2"></div>
+                
+                <!-- Security Shield Background -->
+                <svg id="bg-shield" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 5L15 20V50C15 70 30 88 50 95C70 88 85 70 85 50V20L50 5Z" stroke="rgba(255, 85, 0, 0.15)" stroke-width="2" />
+                    <path d="M50 12L22 24V48C22 64.5 34 79.5 50 85.5C66 79.5 78 64.5 78 48V24L50 12Z" stroke="rgba(255, 34, 34, 0.08)" stroke-width="1" />
+                    <!-- Shield emblem crosses -->
+                    <path d="M50 25V65" stroke="rgba(255, 85, 0, 0.1)" stroke-width="1.5" />
+                    <path d="M35 40H65" stroke="rgba(255, 85, 0, 0.1)" stroke-width="1.5" />
+                </svg>
+                
+                <!-- Scanning Red Rays -->
+                <div class="red-ray-1"></div>
+                <div class="red-ray-2"></div>
+                
+                <!-- Orange Target Dots -->
+                <div class="target-dot" style="top: 18%; left: 7%;"></div>
+                <div class="target-dot" style="top: 48%; right: 9%;"></div>
+                <div class="target-dot" style="top: 80%; left: 14%;"></div>
 
                 <div class="container">
                     <header>
@@ -375,7 +451,7 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                                         <p style="margin: 0; color: #a1a1aa; font-size: 0.95rem; line-height: 1.5;">{explanation}</p>
                                         <div style="background: #000000; border-radius: 4px; padding: 1.25rem; border: 1px solid rgba(255, 85, 0, 0.12); margin-top: 0.5rem; position: relative;">
                                             <span style="font-size: 0.7rem; color: #71717a; font-family: 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: 0.1rem; display: block; margin-bottom: 0.5rem;">[ INTERCEPTED DATA STREAM ]</span>
-                                            <pre style="margin: 0; color: var(--orange); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 250px;">{escaped_json}</pre>
+                                            <pre style="margin: 0; color: var(--red); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 250px;">{escaped_json}</pre>
                                         </div>
                                     </div>
                                 </td>
@@ -387,16 +463,24 @@ class RIGDashboardHandler(http.server.SimpleHTTPRequestHandler):
                     </div>
                 </div>
                 <script>
-                    // Scroll Parallax Handler
+                    // Scroll Parallax & Rotation Handler
                     window.addEventListener('scroll', () => {
                         const scrolled = window.scrollY;
+                        
+                        // Parallax Background Grids (More obvious opacity & speed)
                         const grid1 = document.getElementById('bg-grid-1');
                         const grid2 = document.getElementById('bg-grid-2');
                         if (grid1) {
-                            grid1.style.transform = `translateY(${scrolled * 0.12}px) rotate(${scrolled * 0.005}deg)`;
+                            grid1.style.transform = `translateY(${scrolled * 0.15}px) rotate(${scrolled * 0.008}deg)`;
                         }
                         if (grid2) {
-                            grid2.style.transform = `translateY(${scrolled * 0.25}px)`;
+                            grid2.style.transform = `translateY(${scrolled * 0.3}px)`;
+                        }
+                        
+                        // Rotates the security shield based on scroll amount
+                        const shield = document.getElementById('bg-shield');
+                        if (shield) {
+                            shield.style.transform = `translate(-50%, -50%) rotate(${scrolled * 0.18}deg)`;
                         }
                     });
 
