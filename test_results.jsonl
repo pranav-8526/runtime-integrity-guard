@@ -1,9 +1,9 @@
 {"test_id": "direct_poisoning", "attack_class": "T1_DirectPoisoning", "expected_verdict": "BLOCK", "actual_verdict": "BLOCK"}
-{"test_id": "direct_poisoning_2", "attack_class": "T1_DirectPoisoning", "expected_verdict": "BLOCK", "actual_verdict": "ALLOW"}
-{"test_id": "direct_poisoning_3", "attack_class": "T1_DirectPoisoning", "expected_verdict": "BLOCK", "actual_verdict": "ALLOW"}
+{"test_id": "direct_poisoning_2", "attack_class": "T1_DirectPoisoning", "expected_verdict": "BLOCK", "actual_verdict": "BLOCK"}
+{"test_id": "direct_poisoning_3", "attack_class": "T1_DirectPoisoning", "expected_verdict": "BLOCK", "actual_verdict": "BLOCK"}
 {"test_id": "shadowing", "attack_class": "T5_Shadowing", "expected_verdict": "BLOCK", "actual_verdict": "BLOCK"}
-{"test_id": "shadowing_2", "attack_class": "T5_Shadowing", "expected_verdict": "BLOCK", "actual_verdict": "ALLOW"}
-{"test_id": "shadowing_3", "attack_class": "T5_Shadowing", "expected_verdict": "BLOCK", "actual_verdict": "ALLOW"}
+{"test_id": "shadowing_2", "attack_class": "T5_Shadowing", "expected_verdict": "BLOCK", "actual_verdict": "BLOCK"}
+{"test_id": "shadowing_3", "attack_class": "T5_Shadowing", "expected_verdict": "BLOCK", "actual_verdict": "BLOCK"}
 {"test_id": "rug_pull_1", "attack_class": "Clean", "expected_verdict": "ALLOW", "actual_verdict": "ALLOW"}
 {"test_id": "rug_pull_2", "attack_class": "T4_RugPull", "expected_verdict": "BLOCK", "actual_verdict": "BLOCK"}
 {"test_id": "rug_pull_3", "attack_class": "T4_RugPull", "expected_verdict": "BLOCK", "actual_verdict": "BLOCK"}
