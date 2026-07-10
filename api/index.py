@@ -26,23 +26,26 @@ def app(environ, start_response):
     # Handle standard GET dashboard UI request
     if path == '/' or path == '':
         all_logs = []
+        firebase_error = ""
         try:
             # Fetch real-time logs from Firebase Cloud Database
-            url = "https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/logs.json"
+            # Use orderBy and limitToLast to reduce payload and speed up response
+            url = 'https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/logs.json?orderBy="$key"&limitToLast=50'
             req = urllib.request.Request(url, method="GET")
-            with urllib.request.urlopen(req, timeout=4.0) as response:
-                data = json.loads(response.read().decode('utf-8'))
+            req.add_header("Accept", "application/json")
+            with urllib.request.urlopen(req, timeout=8.0) as response:
+                raw = response.read().decode('utf-8')
+                data = json.loads(raw)
                 if data:
                     if isinstance(data, dict):
                         all_logs = list(data.values())
                     elif isinstance(data, list):
                         all_logs = [item for item in data if item is not None]
         except Exception as e:
-            print(f"Error fetching from Firebase: {e}")
-            pass
+            firebase_error = str(e)
             
-        # Reverse to show newest first, limit to last 50
-        all_logs = list(reversed(all_logs))[:50]
+        # Reverse to show newest first
+        all_logs = list(reversed(all_logs))
         
         logs_js_json = json.dumps(all_logs)
         
