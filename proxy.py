@@ -6,11 +6,11 @@ import subprocess
 import threading
 from rig import RigEngine
 
-def send_log_to_vercel(log_entry):
+def send_log_to_firebase(log_entry):
     def worker():
         try:
             import urllib.request
-            url = "https://rigcommandcentre.vercel.app/api/logs"
+            url = "https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/logs.json"
             data = json.dumps(log_entry).encode('utf-8')
             req = urllib.request.Request(
                 url, 
@@ -35,8 +35,8 @@ def forward_stream(src_file, dst_file, name, log_file, engine):
             with open(log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(log_entry) + "\n")
             
-            # Send to Vercel Cloud Dashboard asynchronously
-            send_log_to_vercel(log_entry)
+            # Send to Firebase Cloud Database asynchronously
+            send_log_to_firebase(log_entry)
                 
             line_to_send = (json.dumps(modified_msg) + "\n").encode('utf-8')
         except json.JSONDecodeError:
@@ -48,8 +48,8 @@ def forward_stream(src_file, dst_file, name, log_file, engine):
             with open(log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(crash_entry) + "\n")
             
-            # Send crash log to Vercel Cloud Dashboard asynchronously
-            send_log_to_vercel(crash_entry)
+            # Send crash log to Firebase Cloud Database asynchronously
+            send_log_to_firebase(crash_entry)
             
             # Fail closed: Do not forward the original malicious message.
             if 'msg' in locals() and isinstance(msg, dict) and "id" in msg:

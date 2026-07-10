@@ -2,29 +2,16 @@ import json
 import os
 import html
 
-# In-memory storage cache to hold dynamically POSTed runtime logs in serverless container memory.
-# Serverless containers are transient, but this maintains live state within active instances.
-LIVE_LOGS_CACHE = []
-MAX_CACHE_SIZE = 50
+import urllib.request
 
 def app(environ, start_response):
-    global LIVE_LOGS_CACHE
     path = environ.get('PATH_INFO', '')
     method = environ.get('REQUEST_METHOD', 'GET')
     
-    # Check for POST endpoint to receive runtime logs from local proxy
+    # Check for POST endpoint (Legacy backward compatibility, can just return success)
     if path == '/api/logs' and method == 'POST':
         try:
-            request_body_size = int(environ.get('CONTENT_LENGTH', 0))
-            request_body = environ['wsgi.input'].read(request_body_size)
-            log_data = json.loads(request_body.decode('utf-8'))
-            
-            # Insert at the front of the cache
-            LIVE_LOGS_CACHE.insert(0, log_data)
-            if len(LIVE_LOGS_CACHE) > MAX_CACHE_SIZE:
-                LIVE_LOGS_CACHE = LIVE_LOGS_CACHE[:MAX_CACHE_SIZE]
-                
-            response = {"status": "success", "cached_logs_count": len(LIVE_LOGS_CACHE)}
+            response = {"status": "success", "message": "Logs are now written directly to Firebase."}
             response_encoded = json.dumps(response).encode('utf-8')
             
             status = '200 OK'
@@ -35,40 +22,28 @@ def app(environ, start_response):
             start_response(status, response_headers)
             return [response_encoded]
         except Exception as e:
-            error_response = {"status": "error", "message": str(e)}
-            error_encoded = json.dumps(error_response).encode('utf-8')
-            status = '400 Bad Request'
-            response_headers = [
-                ('Content-type', 'application/json'),
-                ('Content-Length', str(len(error_encoded)))
-            ]
-            start_response(status, response_headers)
-            return [error_encoded]
-
+            pass
     # Handle standard GET dashboard UI request
     if path == '/' or path == '':
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        audit_path = os.path.join(current_dir, "..", "audit.jsonl")
-        
-        # 1. Base log population from static file if present
-        static_logs = []
-        if os.path.exists(audit_path):
-            with open(audit_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
-                        try:
-                            static_logs.append(json.loads(line))
-                        except:
-                            pass
-        static_logs = list(reversed(static_logs[-30:]))
-        
-        # 2. Merge static baseline logs with active live logs cache (deduplicated by timestamp or order)
-        all_logs = LIVE_LOGS_CACHE.copy()
-        
-        # Match structure of original static logs if in-memory cache is empty
-        if not all_logs:
-            all_logs = static_logs
+        all_logs = []
+        try:
+            # Fetch real-time logs from Firebase Cloud Database
+            url = "https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/logs.json"
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=4.0) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                if data:
+                    if isinstance(data, dict):
+                        all_logs = list(data.values())
+                    elif isinstance(data, list):
+                        all_logs = [item for item in data if item is not None]
+        except Exception as e:
+            print(f"Error fetching from Firebase: {e}")
+            pass
             
+        # Reverse to show newest first, limit to last 50
+        all_logs = list(reversed(all_logs))[:50]
+        
         logs_js_json = json.dumps(all_logs)
         
         # Render HTML dashboard
