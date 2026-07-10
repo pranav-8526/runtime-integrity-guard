@@ -43,8 +43,8 @@ def app(environ, start_response):
         except Exception as e:
             firebase_error = str(e)
             
-        # Reverse to show newest first, take last 50
-        all_logs = list(reversed(all_logs))[:50]
+        # Reverse to show newest first
+        all_logs = list(reversed(all_logs))
         
         logs_js_json = json.dumps(all_logs)
         
