@@ -28,9 +28,8 @@ def app(environ, start_response):
         all_logs = []
         firebase_error = ""
         try:
-            # Fetch real-time logs from Firebase Cloud Database
-            # Use orderBy and limitToLast to reduce payload and speed up response
-            url = 'https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/logs.json?orderBy="$key"&limitToLast=50'
+            # Fetch real-time logs from Firebase Cloud Database (simple GET, no query params)
+            url = "https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/logs.json"
             req = urllib.request.Request(url, method="GET")
             req.add_header("Accept", "application/json")
             with urllib.request.urlopen(req, timeout=8.0) as response:
@@ -44,8 +43,8 @@ def app(environ, start_response):
         except Exception as e:
             firebase_error = str(e)
             
-        # Reverse to show newest first
-        all_logs = list(reversed(all_logs))
+        # Reverse to show newest first, take last 50
+        all_logs = list(reversed(all_logs))[:50]
         
         logs_js_json = json.dumps(all_logs)
         
@@ -492,9 +491,10 @@ def app(environ, start_response):
 """
         
         if not all_logs:
-            html_content += """
+            debug_msg = f"DEBUG: {html.escape(firebase_error)}" if firebase_error else "NO ACTIVE LOGS. RUN SYSTEM TRAFFIC..."
+            html_content += f"""
                 <tr>
-                    <td colspan="3" style="text-align: center; color: #a1a1aa; padding: 2.5rem; font-family: 'Share Tech Mono', monospace;">NO ACTIVE LOG STREATED. RUN SYSTEM TRAFFIC...</td>
+                    <td colspan="3" style="text-align: center; color: #a1a1aa; padding: 2.5rem; font-family: 'Share Tech Mono', monospace;">{debug_msg}</td>
                 </tr>
 """
         else:
