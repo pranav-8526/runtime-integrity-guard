@@ -1,5 +1,7 @@
 # RIG (Runtime Integrity Guard) for MCP
 
+[![Vercel Dashboard](https://img.shields.io/badge/RIG%20Command%20Center-Live%20Dashboard-orange?style=for-the-badge&logo=vercel)](https://rigcommandcentre.vercel.app/)
+
 RIG is a transparent proxy designed to secure Model Context Protocol (MCP) deployments against tool poisoning, rug-pull attacks, and full-schema/output injection.
 
 While existing static scanners (like `mcp-scan`) inspect an MCP tool's metadata at connection time, they miss injections that happen dynamically in the content a tool returns *during* a live session (e.g., reading a poisoned support ticket or GitHub PR). RIG closes this gap by inspecting every JSON-RPC message in real-time, blocking malicious payloads before they ever reach the LLM context window.
