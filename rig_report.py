@@ -4,6 +4,7 @@ import argparse
 def generate_report(log_file):
     total_messages = 0
     blocked_messages = 0
+    degraded_messages = 0
     reasons = {}
     
     try:
@@ -24,6 +25,15 @@ def generate_report(log_file):
                                 reasons[r] = reasons.get(r, 0) + 1
                         else:
                             reasons[raw_reason] = reasons.get(raw_reason, 0) + 1
+                    elif entry.get("verdict") == "ALLOW_DEGRADED":
+                        degraded_messages += 1
+                        
+                        raw_reason = entry.get("reasons", entry.get("reason", "Unknown Reason"))
+                        if isinstance(raw_reason, list):
+                            for r in raw_reason:
+                                reasons[r] = reasons.get(r, 0) + 1
+                        else:
+                            reasons[raw_reason] = reasons.get(raw_reason, 0) + 1
                 except json.JSONDecodeError:
                     pass
     except FileNotFoundError:
@@ -36,7 +46,23 @@ def generate_report(log_file):
     print(f"Total Messages Inspected: {total_messages}")
     print("  *(Note: Counts all JSON-RPC stream packets including handshakes and tool-listing, not just test cases)")
     print(f"Total Messages Blocked:   {blocked_messages}")
-    print("\nBreakdown by Detection Class:")
+    print(f"Total Messages Degraded (Allowed w/o L4): {degraded_messages}")
+    
+    layer_counts = {"Layer 1": 0, "Layer 2": 0, "Layer 4": 0, "Other": 0}
+    for reason, count in reasons.items():
+        if reason.startswith("Layer 1"): layer_counts["Layer 1"] += count
+        elif reason.startswith("Layer 2"): layer_counts["Layer 2"] += count
+        elif reason.startswith("Layer 4"): layer_counts["Layer 4"] += count
+        else: layer_counts["Other"] += count
+        
+    print("\nBreakdown by Layer:")
+    print(f"  - Layer 1 (Hash Baseline): {layer_counts['Layer 1']}")
+    print(f"  - Layer 2 (Regex Patterns): {layer_counts['Layer 2']}")
+    print(f"  - Layer 4 (LLM Judge): {layer_counts['Layer 4']}")
+    if layer_counts['Other'] > 0:
+        print(f"  - Other: {layer_counts['Other']}")
+
+    print("\nDetailed Reasons:")
     for reason, count in sorted(reasons.items(), key=lambda x: x[1], reverse=True):
         print(f"  - {reason}: {count}")
     print("=========================================")
@@ -71,9 +97,9 @@ def evaluate_results(results_file):
             metrics[ac]["TP"] += 1
         elif expected == "ALLOW" and actual == "BLOCK":
             metrics[ac]["FP"] += 1
-        elif expected == "ALLOW" and actual == "ALLOW":
+        elif expected == "ALLOW" and actual in ["ALLOW", "ALLOW_DEGRADED"]:
             metrics[ac]["TN"] += 1
-        elif expected == "BLOCK" and actual == "ALLOW":
+        elif expected == "BLOCK" and actual in ["ALLOW", "ALLOW_DEGRADED"]:
             metrics[ac]["FN"] += 1
 
     print("\n=========================================================================")

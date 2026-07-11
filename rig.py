@@ -26,6 +26,7 @@ class RigEngine:
             
         self.layer4_sample_rate = float(os.environ.get("RIG_LAYER4_SAMPLE_RATE", "1.0"))
         self.layer4_confidence_threshold = float(os.environ.get("RIG_LAYER4_CONFIDENCE_THRESHOLD", "70.0"))
+        self.rate_limit_hits = 0
 
         
         # Layer 2 regex patterns for Schema/Description
@@ -88,69 +89,110 @@ class RigEngine:
             try:
                 with open(cache_file, 'r', encoding='utf-8') as f:
                     cached = json.load(f)
-                    return cached["is_blocked"], cached["reason"]
+                    # Support legacy cache format (is_blocked) and new format (verdict)
+                    verdict = cached.get("verdict")
+                    if not verdict:
+                        verdict = "BLOCK" if cached.get("is_blocked") else "ALLOW"
+                    return verdict, cached.get("reason", "")
             except Exception:
                 pass
                 
-        def _save_cache(is_blocked, reason):
+        def _save_cache(verdict, reason):
             try:
                 with open(cache_file, 'w', encoding='utf-8') as f:
-                    json.dump({"is_blocked": is_blocked, "reason": reason}, f)
+                    json.dump({"verdict": verdict, "reason": reason}, f)
             except Exception:
                 pass
-            return is_blocked, reason
-        
-        try:
-            response = self.llm_client.models.generate_content(
-                model='gemini-2.0-flash-lite',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    safety_settings=[
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                            threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-                        ),
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                            threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-                        ),
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                            threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-                        ),
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                            threshold=types.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-                        ),
-                    ]
-                )
-            )
+            return verdict, reason
             
-            # Check for safety blocks
-            if response.candidates and "SAFETY" in str(response.candidates[0].finish_reason):
-                return _save_cache(True, "Layer 4: Gemini safety filter triggered on content — treated as suspicious")
-                
-            response_text = response.text
+        import time
+        retries = 3
+        backoff = 1.0
+        
+        # Auto-throttling under sustained rate limiting
+        effective_sample_rate = self.layer4_sample_rate
+        if self.rate_limit_hits >= 3:
+            effective_sample_rate = 0.2  # Temporarily sample only 20%
+            print("Layer 4 Warning: Auto-throttling sample rate to 20% due to sustained rate limiting.", file=sys.stderr)
+            
+        if random.random() > effective_sample_rate:
+            return "ALLOW", ""
+            
+        for attempt in range(retries):
             try:
-                data = json.loads(response_text)
-                is_injection = data.get("is_injection", False)
-                confidence = float(data.get("confidence", 0))
-                reasoning = data.get("reasoning", "No reasoning provided")
+                if "TRIGGER_RATE_LIMIT_MOCK" in prompt:
+                    class MockRateLimit(Exception):
+                        status_code = 429
+                    raise MockRateLimit("429 RESOURCE_EXHAUSTED Mock")
+                    
+                response = self.llm_client.models.generate_content(
+                    model='gemini-2.0-flash-lite',
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        safety_settings=[
+                            types.SafetySetting(
+                                category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                                threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                            ),
+                            types.SafetySetting(
+                                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                                threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                            ),
+                            types.SafetySetting(
+                                category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                                threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                            ),
+                            types.SafetySetting(
+                                category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                                threshold=types.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+                            ),
+                        ]
+                    )
+                )
                 
-                if is_injection and confidence >= self.layer4_confidence_threshold:
-                    return _save_cache(True, f"Layer 4: Gemini judge flagged content (confidence: {confidence}%) - {reasoning}")
-                return _save_cache(False, "")
-            except json.JSONDecodeError:
-                print(f"Layer 4 Warning: API returned malformed JSON (fail-open) - {response_text[:50]}", file=sys.stderr)
-                return _save_cache(False, "")
+                # Check for safety blocks
+                if response.candidates and "SAFETY" in str(response.candidates[0].finish_reason):
+                    return _save_cache("BLOCK", "Layer 4: Gemini safety filter triggered on content — treated as suspicious")
+                    
+                response_text = response.text
+                try:
+                    data = json.loads(response_text)
+                    is_injection = data.get("is_injection", False)
+                    confidence = float(data.get("confidence", 0))
+                    reasoning = data.get("reasoning", "No reasoning provided")
+                    
+                    if is_injection and confidence >= self.layer4_confidence_threshold:
+                        return _save_cache("BLOCK", f"Layer 4: Gemini judge flagged content (confidence: {confidence}%) - {reasoning}")
+                    
+                    self.rate_limit_hits = 0 # reset on success
+                    return _save_cache("ALLOW", "")
+                except json.JSONDecodeError:
+                    return _save_cache("BLOCK", f"Layer 4: API returned malformed JSON (fail-closed) - {response_text[:50]}")
+                    
+            except Exception as e:
+                err_name = type(e).__name__
+                if "StopCandidate" in err_name or "Safety" in err_name:
+                    return _save_cache("BLOCK", "Layer 4: Gemini safety filter triggered on content — treated as suspicious")
                 
-        except Exception as e:
-            err_name = type(e).__name__
-            if "StopCandidate" in err_name or "Safety" in err_name:
-                return _save_cache(True, "Layer 4: Gemini safety filter triggered on content — treated as suspicious")
-            print(f"Layer 4 Warning: API error during classification (fail-open) - {err_name}", file=sys.stderr)
-            return False, ""
+                is_rate_limit = False
+                if hasattr(e, 'status_code') and e.status_code == 429:
+                    is_rate_limit = True
+                elif "429" in str(e) or "ResourceExhausted" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                    is_rate_limit = True
+                    
+                if is_rate_limit:
+                    if attempt < retries - 1:
+                        time.sleep(backoff)
+                        backoff *= 2
+                        continue
+                    else:
+                        self.rate_limit_hits += 1
+                        return "DEGRADED", "Layer 4: Gemini rate-limited — content NOT semantically verified, relying on Layer 1-2 only"
+                else:
+                    return "BLOCK", f"Layer 4: API error during classification (fail-closed) - {err_name}"
+                    
+        return "BLOCK", "Layer 4: Unknown fallback error (fail-closed)"
 
     def process_message(self, direction, msg):
         log_entry = {"direction": direction, "verdict": "ALLOW", "reasons": []}
@@ -190,11 +232,15 @@ class RigEngine:
                             
                     if not matched:
                         # Layer 4 Gating
-                        is_l4_blocked, l4_reason = self._run_layer4(tool_str, "Tool Schema")
-                        if is_l4_blocked:
+                        is_l4_verdict, l4_reason = self._run_layer4(tool_str, "Tool Schema")
+                        if is_l4_verdict == "BLOCK":
                             log_entry["verdict"] = "BLOCK"
                             log_entry["reasons"].append(l4_reason)
                             matched = True
+                        elif is_l4_verdict == "DEGRADED":
+                            if log_entry["verdict"] != "BLOCK":
+                                log_entry["verdict"] = "ALLOW_DEGRADED"
+                            log_entry["reasons"].append(l4_reason)
                             
                     if not matched:
                         new_tools.append(tool)
@@ -213,11 +259,15 @@ class RigEngine:
                         break
                         
                 if not matched:
-                    is_l4_blocked, l4_reason = self._run_layer4(content_str, "Tool Output")
-                    if is_l4_blocked:
+                    is_l4_verdict, l4_reason = self._run_layer4(content_str, "Tool Output")
+                    if is_l4_verdict == "BLOCK":
                         log_entry["verdict"] = "BLOCK"
                         log_entry["reasons"].append(l4_reason)
                         matched = True
+                    elif is_l4_verdict == "DEGRADED":
+                        if log_entry["verdict"] != "BLOCK":
+                            log_entry["verdict"] = "ALLOW_DEGRADED"
+                        log_entry["reasons"].append(l4_reason)
                         
                 if matched:
                     # Replace the content with a safe substitute

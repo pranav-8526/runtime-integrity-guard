@@ -48,11 +48,26 @@ async def run_test(mode_id, server_mode, expected_verdict, attack_class):
                             else:
                                 print(f"FAIL: {mode_id} falsely blocked clean content!")
                         else:
+                            # Check audit.jsonl for exact verdict
                             actual_verdict = "ALLOW"
-                            if expected_verdict == "BLOCK":
-                                print(f"FAIL: {mode_id} failed to block malicious content!")
+                            try:
+                                with open("audit.jsonl", "r", encoding="utf-8") as audit_file:
+                                    last_line = audit_file.readlines()[-1]
+                                    last_entry = json.loads(last_line)
+                                    if last_entry.get("verdict") == "ALLOW_DEGRADED":
+                                        actual_verdict = "ALLOW_DEGRADED"
+                            except Exception:
+                                pass
+                                
+                            if expected_verdict == "ALLOW_DEGRADED":
+                                if actual_verdict == "ALLOW_DEGRADED":
+                                    print(f"PASS: {mode_id} correctly triggered DEGRADED fallback.")
+                                else:
+                                    print(f"FAIL: {mode_id} expected DEGRADED fallback but got {actual_verdict}!")
+                            elif expected_verdict == "BLOCK":
+                                print(f"FAIL: {mode_id} failed to block malicious content! (got {actual_verdict})")
                             else:
-                                print(f"PASS: {mode_id} correctly allowed.")
+                                print(f"PASS: {mode_id} correctly allowed (verdict: {actual_verdict}).")
     except Exception as e:
         actual_verdict = "BLOCK" # Connection blocked or dropped
         if expected_verdict == "BLOCK":
@@ -82,6 +97,7 @@ async def main():
         ("layer4_test_1", "layer4_test_1", "BLOCK", "T6_SemanticInjection"),
         ("layer4_test_2", "layer4_test_2", "BLOCK", "T6_SemanticInjection"),
         ("layer4_test_3", "layer4_test_3", "BLOCK", "T6_SemanticInjection"),
+        ("layer4_rate_limit_mock", "layer4_rate_limit_mock", "ALLOW_DEGRADED", "T6_SemanticInjection"),
         ("direct_poisoning", "direct_poisoning", "BLOCK", "T1_DirectPoisoning"),
         ("direct_poisoning_2", "direct_poisoning_2", "BLOCK", "T1_DirectPoisoning"),
         ("direct_poisoning_3", "direct_poisoning_3", "BLOCK", "T1_DirectPoisoning"),
