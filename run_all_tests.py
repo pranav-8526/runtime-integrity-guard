@@ -11,6 +11,7 @@ async def run_test(mode_id, server_mode, expected_verdict, attack_class):
     server_params = StdioServerParameters(
         command=sys.executable,
         args=["proxy.py", sys.executable, os.path.join("test_servers", "suite.py"), "--mode", server_mode],
+        env=os.environ.copy()
     )
 
     actual_verdict = "ALLOW"
@@ -78,6 +79,9 @@ async def main():
 
     tests = [
         # (mode_id, server_mode, expected_verdict, attack_class)
+        ("layer4_test_1", "layer4_test_1", "BLOCK", "T6_SemanticInjection"),
+        ("layer4_test_2", "layer4_test_2", "BLOCK", "T6_SemanticInjection"),
+        ("layer4_test_3", "layer4_test_3", "BLOCK", "T6_SemanticInjection"),
         ("direct_poisoning", "direct_poisoning", "BLOCK", "T1_DirectPoisoning"),
         ("direct_poisoning_2", "direct_poisoning_2", "BLOCK", "T1_DirectPoisoning"),
         ("direct_poisoning_3", "direct_poisoning_3", "BLOCK", "T1_DirectPoisoning"),
@@ -96,6 +100,8 @@ async def main():
         ("output_injection_6", "output_injection_6", "BLOCK", "T3_OutputInjection"),
         ("output_injection_7", "output_injection_7", "BLOCK", "T3_OutputInjection"),
         ("output_injection_8", "output_injection_8", "BLOCK", "T3_OutputInjection"),
+        ("layer4_benign_1", "layer4_benign_1", "ALLOW", "Clean"),
+        ("layer4_benign_2", "layer4_benign_2", "ALLOW", "Clean"),
         ("clean_traffic_1", "clean_traffic_1", "ALLOW", "Clean"),
         ("clean_traffic_2", "clean_traffic_2", "ALLOW", "Clean"),
         ("clean_traffic_3", "clean_traffic_3", "ALLOW", "Clean"),
@@ -119,7 +125,7 @@ async def main():
         passed = await run_test(mode_id, server_mode, expected_verdict, attack_class)
         if not passed:
             all_passed = False
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(4.5)
         
     if all_passed:
         print("\nAll tests passed successfully!")
