@@ -89,32 +89,55 @@ class RigEngine:
             f"Text ({context_type}):\n{text}"
         )
         
-        cache_dir = "llm_cache"
-        os.makedirs(cache_dir, exist_ok=True)
         prompt_hash = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
-        cache_file = os.path.join(cache_dir, f"{prompt_hash}.json")
         
+        # 1. Test-only pre-cache mechanism (simulated results)
+        fake_cache_dir = "llm_cache"
+        fake_cache_file = os.path.join(fake_cache_dir, f"{prompt_hash}.json")
         if os.environ.get("USE_LLM_CACHE") == "1":
-            if os.path.exists(cache_file):
+            if os.path.exists(fake_cache_file):
                 try:
-                    with open(cache_file, 'r', encoding='utf-8') as f:
+                    with open(fake_cache_file, 'r', encoding='utf-8') as f:
                         cached = json.load(f)
-                        # Support legacy cache format (is_blocked) and new format (verdict)
                         verdict = cached.get("verdict")
                         if not verdict:
                             verdict = "BLOCK" if cached.get("is_blocked") else "ALLOW"
                         return verdict, cached.get("reason", "")
                 except Exception:
                     pass
+
+        import time
+
+        # 2. Legitimate production cache optimization (TTL 1 hour)
+        prod_cache_dir = "llm_prod_cache"
+        os.makedirs(prod_cache_dir, exist_ok=True)
+        prod_cache_file = os.path.join(prod_cache_dir, f"{prompt_hash}.json")
+        if os.path.exists(prod_cache_file):
+            if time.time() - os.path.getmtime(prod_cache_file) < 3600:
+                try:
+                    with open(prod_cache_file, 'r', encoding='utf-8') as f:
+                        cached = json.load(f)
+                        print(f"DEBUG LAYER 4 CALL: PROD CACHE HIT for hash {prompt_hash[:8]}...", file=sys.stderr)
+                        return cached.get("verdict", "ALLOW"), cached.get("reason", "")
+                except Exception:
+                    pass
+
         def _save_cache(verdict, reason):
+            # Save to both fake test cache (if enabled) and prod cache
+            if os.environ.get("USE_LLM_CACHE") == "1":
+                os.makedirs(fake_cache_dir, exist_ok=True)
+                try:
+                    with open(fake_cache_file, 'w', encoding='utf-8') as f:
+                        json.dump({"verdict": verdict, "reason": reason}, f)
+                except Exception:
+                    pass
             try:
-                with open(cache_file, 'w', encoding='utf-8') as f:
+                with open(prod_cache_file, 'w', encoding='utf-8') as f:
                     json.dump({"verdict": verdict, "reason": reason}, f)
             except Exception:
                 pass
             return verdict, reason
             
-        import time
         retries = 3
         backoff = 1.0
         
