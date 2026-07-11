@@ -5,18 +5,7 @@ import html
 import firebase_admin
 from firebase_admin import credentials, db
 
-# Initialize Firebase Admin SDK from environment variable
-if not firebase_admin._apps:
-    cert_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON')
-    if cert_json:
-        try:
-            cert_dict = json.loads(cert_json)
-            cred = credentials.Certificate(cert_dict)
-            firebase_admin.initialize_app(cred, {
-                'databaseURL': 'https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/'
-            })
-        except Exception as e:
-            print("Failed to initialize Firebase Admin:", e)
+# We will initialize Firebase Admin SDK lazily inside the handler.
 
 def app(environ, start_response):
     path = environ.get('PATH_INFO', '')
@@ -41,20 +30,60 @@ def app(environ, start_response):
     if path == '/' or path == '':
         all_logs = []
         firebase_error = ""
-        try:
-            # Fetch real-time logs using Firebase Admin SDK (bypasses security rules)
-            if firebase_admin._apps:
+        
+        # Diagnostic logging for Firebase SDK Initialization
+        print("--- FIREBASE INIT DIAGNOSTICS ---")
+        cert_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON')
+        has_env = bool(cert_json)
+        print(f"Env var FIREBASE_SERVICE_ACCOUNT_JSON present: {has_env}")
+        if has_env:
+            print(f"Env var length: {len(cert_json)}")
+            
+        if not firebase_admin._apps:
+            print("SDK not yet initialized. Attempting initialization...")
+            if not has_env:
+                print("Cannot initialize: FIREBASE_SERVICE_ACCOUNT_JSON is empty or missing.")
+                firebase_error = "Firebase Admin SDK not initialized. Missing FIREBASE_SERVICE_ACCOUNT_JSON env var."
+            else:
+                try:
+                    print("1. Parsing JSON...")
+                    cert_dict = json.loads(cert_json)
+                    print("2. Creating Certificate...")
+                    cred = credentials.Certificate(cert_dict)
+                    print("3. Calling initialize_app with databaseURL...")
+                    firebase_admin.initialize_app(cred, {
+                        'databaseURL': 'https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/'
+                    })
+                    print("Initialization successful!")
+                except Exception as e:
+                    import traceback
+                    error_msg = f"Exception during Firebase Init: {type(e).__name__} - {str(e)}"
+                    print(error_msg)
+                    traceback.print_exc()
+                    firebase_error = error_msg
+        else:
+            print("SDK is already initialized in this warm instance.")
+            
+        print("---------------------------------")
+        
+        if not firebase_error:
+            try:
+                # Fetch real-time logs using Firebase Admin SDK (bypasses security rules)
+                print("Fetching logs from /logs reference...")
                 ref = db.reference('logs')
                 data = ref.get()
+                print(f"Logs fetched. Data type: {type(data)}")
                 if data:
                     if isinstance(data, dict):
                         all_logs = list(data.values())
                     elif isinstance(data, list):
                         all_logs = [item for item in data if item is not None]
-            else:
-                firebase_error = "Firebase Admin SDK not initialized. Missing FIREBASE_SERVICE_ACCOUNT_JSON env var."
-        except Exception as e:
-            firebase_error = str(e)
+            except Exception as e:
+                import traceback
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                print("Error during ref.get():", error_msg)
+                traceback.print_exc()
+                firebase_error = error_msg
             
         # Reverse to show newest first
         all_logs = list(reversed(all_logs))
