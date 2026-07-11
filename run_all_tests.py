@@ -8,10 +8,14 @@ from mcp.client.session import ClientSession
 
 async def run_test(mode_id, server_mode, expected_verdict, attack_class):
     print(f"\n--- Running Test Mode: {mode_id} ---")
+    env = os.environ.copy()
+    if mode_id == "layer4_rate_limit_mock":
+        env["MOCK_RATE_LIMIT"] = "1"
+
     server_params = StdioServerParameters(
         command=sys.executable,
         args=["proxy.py", sys.executable, os.path.join("test_servers", "suite.py"), "--mode", server_mode],
-        env=os.environ.copy()
+        env=env
     )
 
     actual_verdict = "ALLOW"
