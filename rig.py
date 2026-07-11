@@ -94,18 +94,18 @@ class RigEngine:
         prompt_hash = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
         cache_file = os.path.join(cache_dir, f"{prompt_hash}.json")
         
-        if os.path.exists(cache_file):
-            try:
-                with open(cache_file, 'r', encoding='utf-8') as f:
-                    cached = json.load(f)
-                    # Support legacy cache format (is_blocked) and new format (verdict)
-                    verdict = cached.get("verdict")
-                    if not verdict:
-                        verdict = "BLOCK" if cached.get("is_blocked") else "ALLOW"
-                    return verdict, cached.get("reason", "")
-            except Exception:
-                pass
-                
+        if os.environ.get("USE_LLM_CACHE") == "1":
+            if os.path.exists(cache_file):
+                try:
+                    with open(cache_file, 'r', encoding='utf-8') as f:
+                        cached = json.load(f)
+                        # Support legacy cache format (is_blocked) and new format (verdict)
+                        verdict = cached.get("verdict")
+                        if not verdict:
+                            verdict = "BLOCK" if cached.get("is_blocked") else "ALLOW"
+                        return verdict, cached.get("reason", "")
+                except Exception:
+                    pass
         def _save_cache(verdict, reason):
             try:
                 with open(cache_file, 'w', encoding='utf-8') as f:

@@ -155,4 +155,12 @@ async def main():
         sys.exit(1)
 
 if __name__ == "__main__":
+    if "--use-cache" in sys.argv:
+        os.environ["USE_LLM_CACHE"] = "1"
+        with open(".cached_run", "w") as f:
+            f.write("1")
+    else:
+        if os.path.exists(".cached_run"):
+            os.remove(".cached_run")
+            
     asyncio.run(main())

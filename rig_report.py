@@ -43,6 +43,13 @@ def generate_report(log_file):
     print("=========================================")
     print("      RIG Security Audit Report          ")
     print("=========================================")
+    
+    import os
+    if os.path.exists(".cached_run"):
+        print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("  SIMULATED/CACHED RESULTS — NOT LIVE API  ")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+
     print(f"Total Messages Inspected: {total_messages}")
     print("  *(Note: Counts all JSON-RPC stream packets including handshakes and tool-listing, not just test cases)")
     print(f"Total Messages Blocked:   {blocked_messages}")
