@@ -2,7 +2,21 @@ import json
 import os
 import html
 
-import urllib.request
+import firebase_admin
+from firebase_admin import credentials, db
+
+# Initialize Firebase Admin SDK from environment variable
+if not firebase_admin._apps:
+    cert_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON')
+    if cert_json:
+        try:
+            cert_dict = json.loads(cert_json)
+            cred = credentials.Certificate(cert_dict)
+            firebase_admin.initialize_app(cred, {
+                'databaseURL': 'https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/'
+            })
+        except Exception as e:
+            print("Failed to initialize Firebase Admin:", e)
 
 def app(environ, start_response):
     path = environ.get('PATH_INFO', '')
@@ -28,18 +42,17 @@ def app(environ, start_response):
         all_logs = []
         firebase_error = ""
         try:
-            # Fetch real-time logs from Firebase Cloud Database (simple GET, no query params)
-            url = "https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/logs.json"
-            req = urllib.request.Request(url, method="GET")
-            req.add_header("Accept", "application/json")
-            with urllib.request.urlopen(req, timeout=8.0) as response:
-                raw = response.read().decode('utf-8')
-                data = json.loads(raw)
+            # Fetch real-time logs using Firebase Admin SDK (bypasses security rules)
+            if firebase_admin._apps:
+                ref = db.reference('logs')
+                data = ref.get()
                 if data:
                     if isinstance(data, dict):
                         all_logs = list(data.values())
                     elif isinstance(data, list):
                         all_logs = [item for item in data if item is not None]
+            else:
+                firebase_error = "Firebase Admin SDK not initialized. Missing FIREBASE_SERVICE_ACCOUNT_JSON env var."
         except Exception as e:
             firebase_error = str(e)
             
