@@ -33,31 +33,31 @@ The **Model Context Protocol (MCP)** lets LLMs call external tools — but those
 ```mermaid
 graph LR
     subgraph Client
-        A[Claude Desktop / LLM Client]
+        A["Claude Desktop / LLM Client"]
     end
 
-    subgraph RIG Proxy - Data Plane
-        B[proxy.py<br/>stdin/stdout Bridge]
-        C[rig.py<br/>4-Layer Detection Engine]
+    subgraph RIG["RIG Proxy - Data Plane"]
+        B["proxy.py — stdin/stdout Bridge"]
+        C["rig.py — 4-Layer Detection Engine"]
     end
 
-    subgraph MCP Server
-        D[Target Tool Server]
+    subgraph MCP["MCP Server"]
+        D["Target Tool Server"]
     end
 
-    subgraph Control Plane
-        E[Next.js Dashboard<br/>Real-time Audit UI]
-        F[audit.jsonl<br/>Structured Event Log]
+    subgraph Control["Control Plane"]
+        E["Next.js Dashboard — Real-time Audit UI"]
+        F["audit.jsonl — Structured Event Log"]
     end
 
-    A -- JSON-RPC --> B
-    B -- Inspect --> C
-    C -- Verdict: ALLOW --> B
-    C -- Verdict: BLOCK --> B
-    B -- Forward / Drop --> D
-    D -- Response --> B
-    B -- Log Event --> F
-    F -- Stream --> E
+    A -- "JSON-RPC" --> B
+    B -- "Inspect" --> C
+    C -- "ALLOW" --> B
+    C -- "BLOCK" --> B
+    B -- "Forward / Drop" --> D
+    D -- "Response" --> B
+    B -- "Log Event" --> F
+    F -- "Stream" --> E
 
     style A fill:#1a1a2e,stroke:#58a6ff,color:#e6edf3
     style B fill:#161b22,stroke:#f85149,color:#e6edf3
