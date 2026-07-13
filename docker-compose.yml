@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  rig-dashboard:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount the root directory to access audit.jsonl from the API route
+      - .:/workspace
+    environment:
+      - NODE_ENV=production
+      - AUDIT_LOG_PATH=/workspace/audit.jsonl
+    working_dir: /app
+    restart: always

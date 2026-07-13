@@ -6,24 +6,6 @@ import subprocess
 import threading
 from rig import RigEngine
 
-def send_log_to_firebase(log_entry):
-    def worker():
-        try:
-            import urllib.request
-            url = "https://rigdashboard-ce4dc-default-rtdb.firebaseio.com/logs.json"
-            data = json.dumps(log_entry).encode('utf-8')
-            req = urllib.request.Request(
-                url, 
-                data=data, 
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
-            with urllib.request.urlopen(req, timeout=3.0) as response:
-                response.read()
-        except Exception:
-            pass  # Fail silently to avoid breaking execution if offline
-    threading.Thread(target=worker, daemon=True).start()
-
 def forward_stream(src_file, dst_file, name, log_file, engine):
     for line in src_file:
         line_to_send = line
@@ -34,9 +16,6 @@ def forward_stream(src_file, dst_file, name, log_file, engine):
             
             with open(log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(log_entry) + "\n")
-            
-            # Send to Firebase Cloud Database asynchronously
-            send_log_to_firebase(log_entry)
                 
             line_to_send = (json.dumps(modified_msg) + "\n").encode('utf-8')
         except json.JSONDecodeError:
@@ -47,9 +26,6 @@ def forward_stream(src_file, dst_file, name, log_file, engine):
             crash_entry = {"error": str(e), "direction": name, "verdict": "BLOCK", "reason": "Engine crashed (Fail Closed)"}
             with open(log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(crash_entry) + "\n")
-            
-            # Send crash log to Firebase Cloud Database asynchronously
-            send_log_to_firebase(crash_entry)
             
             # Fail closed: Do not forward the original malicious message.
             if 'msg' in locals() and isinstance(msg, dict) and "id" in msg:
@@ -87,6 +63,10 @@ def main():
     parser.add_argument("command", nargs=argparse.REMAINDER, help="Command to run the real MCP server")
     args = parser.parse_args()
 
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
     log_file = "audit.jsonl"
 
     # Derive a stable server_id using the absolute path to prevent collisions between different servers named 'app.py'
@@ -107,6 +87,8 @@ def main():
     )
 
     # Start forwarding threads
+    # Using dedicated threads for reading sys.stdin and process.stdout is the most 
+    # stable cross-platform approach for Python proxying (asyncio connect_read_pipe fails on Windows standard handles).
     t1 = threading.Thread(
         target=forward_stream,
         args=(sys.stdin.buffer, process.stdin, "client->server", log_file, engine),
