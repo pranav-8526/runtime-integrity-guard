@@ -4,11 +4,10 @@ import * as path from 'path';
 
 export async function GET() {
   try {
-    // Navigate up from frontend directory to find the audit.jsonl in the root workspace
-    // If running in Docker, it might be in /workspace, otherwise look in parent directory.
+    // Now that Next.js is at the root, audit.jsonl is in process.cwd()
     const auditFilePath = process.env.AUDIT_LOG_PATH 
       ? process.env.AUDIT_LOG_PATH 
-      : path.join(process.cwd(), '..', 'audit.jsonl');
+      : path.join(process.cwd(), 'audit.jsonl');
     
     if (!fs.existsSync(auditFilePath)) {
       return NextResponse.json({ logs: [] });
